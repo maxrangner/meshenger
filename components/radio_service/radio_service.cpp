@@ -67,22 +67,20 @@ int RadioService::begin() {
     return RADIOLIB_ERR_NONE;
 }
 
-int RadioService::startReceive() {
-    packet_received_ = false;
-    const int state = radio_.startReceive();
-
-    if (state != RADIOLIB_ERR_NONE) {
-        ESP_LOGI(TAG, "failed, code %d\n", state);
-        return state;
-    }
-
-    return state;
-}
-
 void RadioService::stop() {
     // Stop implementation
 }
 
-void RadioService::send() {
-    // Send implementation
+int RadioService::receive(char* buffer, size_t capacity) {
+    // packet_received_ = false;
+
+    int state = radio_.receive(reinterpret_cast<uint8_t*>(buffer), capacity);
+
+    return state;
+}
+
+int RadioService::send(const char* message, size_t length) {
+    int state = radio_.transmit(message, length);
+
+    return state;
 }
