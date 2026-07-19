@@ -35,8 +35,8 @@ private:
     
     int begin();
     void stop();
-    void send();
-    int startReceive();
+    int receive(char* buffer, size_t length);
+    int send(const char* message, size_t length);
 };
 
 
