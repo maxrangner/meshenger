@@ -1,0 +1,20 @@
+menu "Meshenger configuration"
+
+    choice MESHENGER_DEVICE_ROLE
+        prompt "Device role"
+        default MESHENGER_ROLE_RECEIVER
+
+        config MESHENGER_ROLE_SENDER
+            bool "Sender"
+
+        config MESHENGER_ROLE_RECEIVER
+            bool "Receiver"
+    endchoice
+
+    config MESHENGER_SEND_INTERVAL_MS
+        int "Send interval (milliseconds)"
+        depends on MESHENGER_ROLE_SENDER
+        range 100 3600000
+        default 5000
+
+endmenu
