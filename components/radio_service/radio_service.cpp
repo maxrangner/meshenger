@@ -71,16 +71,16 @@ void RadioService::stop() {
     // Stop implementation
 }
 
-int RadioService::receive(char* buffer, size_t capacity) {
+int RadioService::receive(uint8_t* buffer, size_t capacity) {
     // packet_received_ = false;
 
-    int state = radio_.receive(reinterpret_cast<uint8_t*>(buffer), capacity);
+    int state = radio_.receive(buffer, capacity);
 
     return state;
 }
 
-int RadioService::send(const char* message, size_t length) {
-    int state = radio_.transmit(message, length);
+int RadioService::send(const uint8_t* buffer, size_t length) {
+    int state = radio_.transmit(buffer, length);
 
     return state;
 }
