@@ -4,7 +4,7 @@
 
 namespace utils {
 
-void serializePacket(const protocol::Packet& packet, uint8_t* buffer);
-void deserializePacket(const uint8_t* buffer, protocol::Packet& packet);
+void serialize_packet(const protocol::Packet& packet, uint8_t* buffer);
+void deserialize_packet(const uint8_t* buffer, protocol::Packet& packet);
 
 }
