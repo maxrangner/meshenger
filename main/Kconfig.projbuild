@@ -13,7 +13,7 @@ menu "Meshenger configuration"
 
     config MESHENGER_SEND_INTERVAL_MS
         int "Send interval (milliseconds)"
-        depends on MESHENGER_ROLE_SENDER
+        # depends on MESHENGER_ROLE_SENDER
         range 100 3600000
         default 5000
 
