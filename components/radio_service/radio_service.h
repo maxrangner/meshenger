@@ -28,17 +28,20 @@ private:
     TaskHandle_t transmit_task_handle = nullptr;
     static constexpr BaseType_t kTaskCore = 0;
 
+    uint8_t transmit_interval_ms;
+
     EspHal hal;
     Module module;
     SX1262 radio;
 
     static volatile bool packet_received;
     static void IRAM_ATTR on_packet_received();
-    public:
+public:
     RadioService();
-    
     int init();
     void start(bool is_sender);
+    static void transmit_task(void* pvParameters);
+    static void receive_task(void* pvParameters);
     void stop();
     int receive(uint8_t* buffer, size_t length);
     int send(const uint8_t* buffer, size_t length);
