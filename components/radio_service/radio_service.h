@@ -6,6 +6,18 @@
 #include "esp_attr.h"
 #include "hal/ESP-IDF/EspHal.h"
 
+#include "packet.h"
+
+enum class RadioServiceEvent {
+    SEND_PACKET,
+    RADIO_EVENT,
+};
+
+enum class RadioState {
+    TRANSMITTING,
+    RECEIVING
+};
+
 class RadioService {
 private:
     gpio_num_t spi_cs_pin = static_cast<gpio_num_t>(8);
@@ -24,26 +36,26 @@ private:
     int8_t radio_power = -3;
     uint8_t spreading_factor = 9;
 
-    TaskHandle_t receive_task_handle = nullptr;
-    TaskHandle_t transmit_task_handle = nullptr;
+    TaskHandle_t radio_task_handle = nullptr;
     static constexpr BaseType_t kTaskCore = 0;
+    inline static QueueHandle_t radio_queue = nullptr;
 
     uint8_t transmit_interval_ms;
 
     EspHal hal;
     Module module;
     SX1262 radio;
+    RadioState radio_state;
 
     static volatile bool packet_received;
-    static void IRAM_ATTR on_packet_received();
+    static void IRAM_ATTR radio_event();
 public:
     RadioService();
     int init();
-    void start(bool is_sender);
-    static void transmit_task(void* pvParameters);
+    static void radio_service_task(void* pvParameters);
     static void receive_task(void* pvParameters);
-    void stop();
-    int receive(uint8_t* buffer, size_t length);
+    void start_rx();
+    void read_new_packet(uint8_t* buffer, size_t length, protocol::Packet& packet);
     int send(const uint8_t* buffer, size_t length);
 };
 
