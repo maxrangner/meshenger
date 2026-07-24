@@ -17,6 +17,12 @@ void IRAM_ATTR RadioService::radio_event() {
     xQueueSendFromISR(radio_queue, &radio_event, nullptr);
 }
 
+static void handle_button_callback(button_event_t event, gpio_num_t gpio_num, void *user_data) {
+    auto* context = static_cast<ButtonContext*>(user_data);
+    RadioServiceEvent button_event = RadioServiceEvent::SEND_PACKET;
+    xQueueSend(context->queue, &button_event, 0);
+}
+
 int RadioService::init() {
     ESP_LOGI(TAG, "Initializing RadioService...");
 
@@ -81,6 +87,14 @@ int RadioService::init() {
     radio.setDio1Action(radio_event);
     radio_state = RadioState::RECEIVING;
 
+    button_cfg_t btn_cfg = BUTTON_CFG_DEFAULT(button_pin, handle_button_callback);
+    btn_ctx.queue = radio_queue;
+    btn_cfg.user_data = &btn_ctx;
+    btn_cfg.hasPullup = true;
+
+    ESP_ERROR_CHECK(button_service_init());
+    ESP_ERROR_CHECK(button_init(&btn_cfg, &main_btn));
+
     return RADIOLIB_ERR_NONE;
 }
 
@@ -92,6 +106,13 @@ void RadioService::radio_service_task(void* pvParameters) {
     RadioServiceEvent event;
     uint8_t buffer[protocol::kPacketSize] = {};
     protocol::Packet packet = {};
+
+    #if CONFIG_MESHENGER_DEVICE_ID_A
+        constexpr char kUnitId = 'A';
+    #elif CONFIG_MESHENGER_DEVICE_ID_B
+        constexpr char kUnitId = 'B';
+    #endif
+
     char message[32] = {};
     uint16_t num_packets = 0;
 
@@ -103,7 +124,7 @@ void RadioService::radio_service_task(void* pvParameters) {
             case RadioServiceEvent::SEND_PACKET:
                 switch (self->radio_state) {
                     case RadioState::RECEIVING:
-                        snprintf(message, sizeof(message), "Send packet %d", num_packets++);
+                        snprintf(message, sizeof(message), "Unit %c --- Packet #%d", kUnitId, num_packets++);
                         memcpy(packet.payload, message, strlen(message) + 1);
                         utils::serialize_packet(packet, buffer);
                         self->radio_state = RadioState::TRANSMITTING;

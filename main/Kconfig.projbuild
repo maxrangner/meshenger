@@ -11,6 +11,20 @@ menu "Meshenger configuration"
             bool "Receiver"
     endchoice
 
+    choice MESHENGER_DEVICE_ID
+        prompt "Device ID"
+        default MESHENGER_DEVICE_ID_A
+
+        config MESHENGER_DEVICE_ID_A
+            bool "A"
+        config MESHENGER_DEVICE_ID_B
+            bool "B"
+        config MESHENGER_DEVICE_ID_C
+            bool "C"
+        config MESHENGER_DEVICE_ID_D
+            bool "D"
+    endchoice
+
     config MESHENGER_SEND_INTERVAL_MS
         int "Send interval (milliseconds)"
         # depends on MESHENGER_ROLE_SENDER

@@ -5,6 +5,7 @@
 #include "driver/gpio.h"
 #include "esp_attr.h"
 #include "hal/ESP-IDF/EspHal.h"
+#include "button_driver.h"
 
 #include "packet.h"
 
@@ -16,6 +17,10 @@ enum class RadioServiceEvent {
 enum class RadioState {
     TRANSMITTING,
     RECEIVING
+};
+
+struct ButtonContext {
+    QueueHandle_t queue;
 };
 
 class RadioService {
@@ -36,11 +41,17 @@ private:
     int8_t radio_power = -3;
     uint8_t spreading_factor = 9;
 
+    const char kUnitId = 'A';
+
     TaskHandle_t radio_task_handle = nullptr;
     static constexpr BaseType_t kTaskCore = 0;
     inline static QueueHandle_t radio_queue = nullptr;
 
     uint8_t transmit_interval_ms;
+
+    gpio_num_t button_pin = GPIO_NUM_0;
+    button_t main_btn;
+    ButtonContext btn_ctx;
 
     EspHal hal;
     Module module;
