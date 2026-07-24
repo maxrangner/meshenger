@@ -1,20 +1,11 @@
-## IDF Component Manager Manifest File
 dependencies:
-  ## Required IDF version
   idf:
     version: '>=4.1.0'
-  # # Put list of dependencies here
-  # # For components maintained by Espressif:
-  # component: "~1.0.0"
-  # # For 3rd party components:
-  # username/component: ">=1.0.0,<2.0.0"
-  # username2/component2:
-  #   version: "~1.0.0"
-  #   # For transient dependencies `public` flag can be set.
-  #   # `public` flag doesn't have an effect dependencies of the `main` component.
-  #   # All dependencies of `main` are public by default.
-  #   public: true
   RadioLib:
     git: https://github.com/jgromes/RadioLib.git
-    # master branch
+    # Locked master branch commit
     version: 6d8934836678d8894e3d556550475b37dce3e2b6
+  esp-idf-button-driver:
+    git: https://github.com/maxrangner/esp-idf-button-driver.git
+    # Current version
+    version: v0.9.0

@@ -9,13 +9,22 @@ dependencies:
       path: .
       type: git
     version: 6d8934836678d8894e3d556550475b37dce3e2b6
+  esp-idf-button-driver:
+    component_hash: 2548ab30bd1bebce29726e4786720b4c52142eb170fce2009b2515369c3e1425
+    dependencies: []
+    source:
+      git: https://github.com/maxrangner/esp-idf-button-driver.git
+      path: .
+      type: git
+    version: 326839a918b5c88506f6477d7aedc3b882775aa7
   idf:
     source:
       type: idf
     version: 5.5.4
 direct_dependencies:
 - RadioLib
+- esp-idf-button-driver
 - idf
-manifest_hash: dec781cf673d6a8e2b62b348882379f207830c94aabc8fde944b1a9ee1393e18
+manifest_hash: 06f010f95b6bebefbd234a0fde4a65bdb631283d90aac8f42d54181de0fb83cd
 target: esp32s3
 version: 2.0.0
