@@ -60,6 +60,7 @@ private:
 
     static volatile bool packet_received;
     static void IRAM_ATTR radio_event();
+    int init_radio();
 public:
     RadioService();
     int init();

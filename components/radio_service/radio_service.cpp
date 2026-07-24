@@ -23,9 +23,7 @@ static void handle_button_callback(button_event_t event, gpio_num_t gpio_num, vo
     xQueueSend(context->queue, &button_event, 0);
 }
 
-int RadioService::init() {
-    ESP_LOGI(TAG, "Initializing RadioService...");
-
+int RadioService::init_radio() {
     // Init Heltec v4.3.1 external front-end
     ESP_ERROR_CHECK(gpio_set_direction(vfem_ctrl_pin, GPIO_MODE_OUTPUT));
     ESP_ERROR_CHECK(gpio_set_direction(pa_csd_pin, GPIO_MODE_OUTPUT));
@@ -52,6 +50,12 @@ int RadioService::init() {
     };
 
     ESP_LOGI(TAG, "[SX1262] Initializing ... ");
+
+
+    radio.setRfSwitchTable(rf_switch_pins, rf_switch_table);
+
+    radio.tcxoVoltage = 1.8f;
+
     ConfigLoRa_t radio_config_t = {
         .frequency = 869.525,
         .bandwidth = 125.0,
@@ -61,13 +65,21 @@ int RadioService::init() {
         .power = radio_power,
         .preambleLength = 8
     };
-
-    radio.setRfSwitchTable(rf_switch_pins, rf_switch_table);
-
-    radio.tcxoVoltage = 1.8f;
+    
     int state = radio.begin(radio_config_t);
     if (state != RADIOLIB_ERR_NONE) {
         ESP_LOGE(TAG, "[SX1262] Initialization failed, code %d", state);
+        return state;
+    }
+
+    return state;
+}
+
+int RadioService::init() {
+    ESP_LOGI(TAG, "Initializing RadioService...");
+
+    int state = init_radio();
+    if (state != RADIOLIB_ERR_NONE) {
         return state;
     }
 
