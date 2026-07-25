@@ -24,10 +24,6 @@ enum class RadioState {
     RECEIVING
 };
 
-struct ButtonContext {
-    QueueHandle_t queue;
-};
-
 class RadioService {
 private:
     gpio_num_t spi_cs_pin = static_cast<gpio_num_t>(8);
@@ -50,13 +46,9 @@ private:
 
     TaskHandle_t radio_task_handle = nullptr;
     static constexpr BaseType_t kTaskCore = 1;
-    inline static QueueHandle_t radio_queue = nullptr;
+    inline static QueueHandle_t radio_queue_handle = nullptr;
 
     uint8_t transmit_interval_ms;
-
-    gpio_num_t button_pin = GPIO_NUM_0;
-    button_t main_btn;
-    ButtonContext btn_ctx;
 
     EspHal hal;
     Module module;
@@ -70,10 +62,11 @@ private:
     static void receive_task(void* pvParameters);
     void start_rx();
     void read_new_packet(uint8_t* buffer, size_t length, protocol::Packet& packet);
+    int send(const uint8_t* buffer, size_t length);
 public:
     RadioService();
     int init();
-    int send(const uint8_t* buffer, size_t length);
+    QueueHandle_t get_queue();
 };
 
 }

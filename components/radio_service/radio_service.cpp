@@ -16,13 +16,7 @@ RadioService::RadioService() : hal(spi_sck_pin, spi_miso_pin, spi_mosi_pin),
 
 void IRAM_ATTR RadioService::radio_event() {
     RadioServiceEvent radio_event = RadioServiceEvent::RADIO_EVENT;
-    xQueueSendFromISR(radio_queue, &radio_event, nullptr);
-}
-
-static void handle_button_callback(button_event_t event, gpio_num_t gpio_num, void *user_data) {
-    auto* context = static_cast<ButtonContext*>(user_data);
-    RadioServiceEvent button_event = RadioServiceEvent::SEND_PACKET;
-    xQueueSend(context->queue, &button_event, 0);
+    xQueueSendFromISR(radio_queue_handle, &radio_event, nullptr);
 }
 
 int RadioService::init_radio() {
@@ -87,8 +81,9 @@ int RadioService::init() {
 
     ESP_LOGI(TAG, "RadioService and [SX1262] Initialized successfully");
 
-    radio_queue = xQueueCreate(10, sizeof(RadioServiceEvent));
-    xTaskCreatePinnedToCore(       // RadioService Task
+    radio_queue_handle = xQueueCreate(10, sizeof(RadioServiceEvent));
+
+    xTaskCreatePinnedToCore(
         radio_service_task,        // Function to implement the task
         "RadioServiceTask",        // Name of the task
         8192,                      // Stack size in bytes
@@ -101,21 +96,13 @@ int RadioService::init() {
     radio.setDio1Action(radio_event);
     radio_state = RadioState::RECEIVING;
 
-    button_cfg_t btn_cfg = BUTTON_CFG_DEFAULT(button_pin, handle_button_callback);
-    btn_ctx.queue = radio_queue;
-    btn_cfg.user_data = &btn_ctx;
-    btn_cfg.hasPullup = true;
-
-    ESP_ERROR_CHECK(button_service_init());
-    ESP_ERROR_CHECK(button_init(&btn_cfg, &main_btn));
-
     return RADIOLIB_ERR_NONE;
 }
 
 void RadioService::radio_service_task(void* pvParameters) {
     auto* self = static_cast<RadioService*>(pvParameters);
 
-    ESP_LOGI(TAG, "Running radio task");
+    ESP_LOGI(TAG, "Running radio task on core %d", kTaskCore);
 
     RadioServiceEvent event;
     uint8_t buffer[protocol::kPacketSize] = {};
@@ -133,7 +120,7 @@ void RadioService::radio_service_task(void* pvParameters) {
     self->start_rx();
 
     while(true) {
-        xQueueReceive(self->radio_queue, &event, portMAX_DELAY);
+        xQueueReceive(self->radio_queue_handle, &event, portMAX_DELAY);
         switch (event) {
             case RadioServiceEvent::SEND_PACKET:
                 switch (self->radio_state) {
@@ -201,6 +188,10 @@ int RadioService::send(const uint8_t* buffer, size_t length) {
     }
 
     return state;
+}
+
+QueueHandle_t RadioService::get_queue() {
+    return radio_queue_handle;
 }
 
 }
