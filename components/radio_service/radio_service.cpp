@@ -7,6 +7,8 @@
 
 static const char *TAG = "RadioService";
 
+namespace radio {
+
 RadioService::RadioService() : hal(spi_sck_pin, spi_miso_pin, spi_mosi_pin),
                                module(&hal, spi_cs_pin, sx1262_dio1_pin, sx1262_reset_pin, sx1262_busy_pin),
                                radio(&module) {
@@ -199,4 +201,6 @@ int RadioService::send(const uint8_t* buffer, size_t length) {
     }
 
     return state;
+}
+
 }

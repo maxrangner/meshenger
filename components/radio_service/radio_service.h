@@ -9,6 +9,11 @@
 
 #include "packet.h"
 
+namespace radio {
+
+const constexpr uint8_t kRadioPower = 14;
+const constexpr uint8_t kSpreadingFactor = 9;
+
 enum class RadioServiceEvent {
     SEND_PACKET,
     RADIO_EVENT,
@@ -38,13 +43,13 @@ private:
     gpio_num_t pa_csd_pin = static_cast<gpio_num_t>(2);
     gpio_num_t pa_ctx_pin = static_cast<gpio_num_t>(5);
 
-    int8_t radio_power = -3;
-    uint8_t spreading_factor = 9;
+    int8_t radio_power = kRadioPower;
+    uint8_t spreading_factor = kSpreadingFactor;
 
     const char kUnitId = 'A';
 
     TaskHandle_t radio_task_handle = nullptr;
-    static constexpr BaseType_t kTaskCore = 0;
+    static constexpr BaseType_t kTaskCore = 1;
     inline static QueueHandle_t radio_queue = nullptr;
 
     uint8_t transmit_interval_ms;
@@ -61,14 +66,15 @@ private:
     static volatile bool packet_received;
     static void IRAM_ATTR radio_event();
     int init_radio();
-public:
-    RadioService();
-    int init();
     static void radio_service_task(void* pvParameters);
     static void receive_task(void* pvParameters);
     void start_rx();
     void read_new_packet(uint8_t* buffer, size_t length, protocol::Packet& packet);
+public:
+    RadioService();
+    int init();
     int send(const uint8_t* buffer, size_t length);
 };
 
+}
 
