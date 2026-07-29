@@ -6,21 +6,26 @@
 #include "esp_attr.h"
 #include "hal/ESP-IDF/EspHal.h"
 #include "button_driver.h"
-
 #include "packet.h"
 
-enum class RadioServiceEvent {
+namespace radio {
+
+const constexpr uint8_t kRadioPower = 14;
+const constexpr uint8_t kSpreadingFactor = 9;
+
+enum class RadioCommandMessage {
     SEND_PACKET,
     RADIO_EVENT,
+};
+
+struct RadioCommand {
+    RadioCommandMessage message;
+    uint8_t payload[protocol::kPacketSize];
 };
 
 enum class RadioState {
     TRANSMITTING,
     RECEIVING
-};
-
-struct ButtonContext {
-    QueueHandle_t queue;
 };
 
 class RadioService {
@@ -38,20 +43,16 @@ private:
     gpio_num_t pa_csd_pin = static_cast<gpio_num_t>(2);
     gpio_num_t pa_ctx_pin = static_cast<gpio_num_t>(5);
 
-    int8_t radio_power = -3;
-    uint8_t spreading_factor = 9;
-
-    const char kUnitId = 'A';
+    int8_t radio_power = kRadioPower;
+    uint8_t spreading_factor = kSpreadingFactor;
 
     TaskHandle_t radio_task_handle = nullptr;
-    static constexpr BaseType_t kTaskCore = 0;
-    inline static QueueHandle_t radio_queue = nullptr;
+    static constexpr BaseType_t kTaskCore = 1;
+    inline static QueueHandle_t radio_queue_handle = nullptr;
+
+    QueueHandle_t app_queue_handle = nullptr;
 
     uint8_t transmit_interval_ms;
-
-    gpio_num_t button_pin = GPIO_NUM_0;
-    button_t main_btn;
-    ButtonContext btn_ctx;
 
     EspHal hal;
     Module module;
@@ -61,14 +62,17 @@ private:
     static volatile bool packet_received;
     static void IRAM_ATTR radio_event();
     int init_radio();
-public:
-    RadioService();
-    int init();
     static void radio_service_task(void* pvParameters);
     static void receive_task(void* pvParameters);
     void start_rx();
-    void read_new_packet(uint8_t* buffer, size_t length, protocol::Packet& packet);
-    int send(const uint8_t* buffer, size_t length);
+    void read_new_packet();
+    int transmit(const uint8_t* serialized_packet);
+    void transmit_complete();
+public:
+    RadioService();
+    int init(QueueHandle_t queue);
+    void send_packet(const uint8_t* serialized_packet);
 };
 
+}
 
