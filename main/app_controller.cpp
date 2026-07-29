@@ -1,6 +1,9 @@
 #include "app_controller.h"
 
+#include "button_driver.h"
 #include "esp_log.h"
+#include "utils.h"
+#include "app_message.h"
 
 const char* TAG = "app_controller";
 
@@ -11,8 +14,23 @@ AppController::AppController() {
 
 static void handle_button_callback(button_event_t event, gpio_num_t gpio_num, void *user_data) {
     auto* context = static_cast<ButtonContext*>(user_data);
-    AppEvent button_event = AppEvent::SEND_MESSAGE;
-    xQueueSend(context->queue, &button_event, 0);
+
+    AppEvent button_event;
+
+    switch (event) {
+        case button_event_t::BTN_SHORT_PRESS:
+            ESP_LOGI(TAG, "Button callback - Short press!");
+
+            button_event.message = AppEventMessage::BUTTON_SHORT_PRESS;
+            xQueueSend(context->queue, &button_event, 0);
+            break;
+        case button_event_t::BTN_LONG_PRESS:
+            ESP_LOGI(TAG, "Button callback - Long press!");
+
+            button_event.message = AppEventMessage::BUTTON_LONG_PRESS;
+            xQueueSend(context->queue, &button_event, 0);
+            break;
+    }
 }
 
 void AppController::init() {
@@ -20,12 +38,10 @@ void AppController::init() {
 
     app_queue_handle = xQueueCreate(10, sizeof(AppEvent));
 
-    int state = radio.init();
+    int state = radio.init(app_queue_handle);
     if (state != RADIOLIB_ERR_NONE) {
         ESP_LOGI(TAG, "Radio failed to initialize, code %d", state);
     }
-    
-    radio_queue_handle = radio.get_queue();
  
     xTaskCreatePinnedToCore(
         app_task,                  // Function to implement the task
@@ -52,19 +68,52 @@ void AppController::app_task(void* pvParameters) {
     ESP_LOGI(TAG, "Running app task on core %d", kTaskCore);
 
     AppEvent event;
-    radio::RadioServiceEvent radio_event;
+    radio::RadioCommandMessage radio_event;
 
     while(true) {
         xQueueReceive(self->app_queue_handle, &event, portMAX_DELAY);
-        switch (event) {
-            case AppEvent::SEND_MESSAGE:
-                radio_event = radio::RadioServiceEvent::SEND_PACKET;
-                xQueueSend(self->radio_queue_handle, &radio_event, portMAX_DELAY);
+        switch (event.message) {
+            case AppEventMessage::BUTTON_SHORT_PRESS:
+                self->status_update();
                 break;
-            case AppEvent::MESSAGE_RECEIVED:
+            case AppEventMessage::BUTTON_LONG_PRESS:
+                ESP_LOGI(TAG, "Button long press has no action yet.");
+                break;
+            case AppEventMessage::MESSAGE_RECEIVED:
+                self->status_received(event.payload);
+                break;
+            default:
                 break;
         }
     }
+}
+
+void AppController::status_update() {
+    ESP_LOGI(TAG, "Update status.");
+
+    protocol::Packet packet;
+    uint8_t buffer[protocol::kPacketSize];
+
+    packet.sender_id = kUnitId;
+    packet.version = protocol::kPacketVersion;
+    char message[protocol::kPayloadSize] = {};
+    static uint16_t num_packets = 0;
+
+    snprintf(message, sizeof(message), "Unit %c -Packet(v.%d)#%d", kUnitId, packet.version, num_packets++);
+    memcpy(packet.payload, message, protocol::kPayloadSize);
+
+    utils::serialize_packet(packet, buffer);
+
+    radio.send_packet(buffer);
+}
+
+void AppController::status_received(const uint8_t* serialized_packet) {
+    ESP_LOGI(TAG, "Status received.");
+
+    protocol::Packet packet;
+    utils::deserialize_packet(serialized_packet, packet);
+
+    ESP_LOGI(TAG, "Packet received: Unit %c (v.%d): %s", packet.sender_id, packet.version, packet.payload);
 }
 
 }

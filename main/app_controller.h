@@ -5,11 +5,6 @@
 
 namespace app {
 
-enum class AppEvent {
-    SEND_MESSAGE,
-    MESSAGE_RECEIVED
-};
-
 struct ButtonContext {
     QueueHandle_t queue;
 };
@@ -20,7 +15,12 @@ class AppController {
     static constexpr BaseType_t kTaskCore = 0;
 
     radio::RadioService radio;
-    QueueHandle_t radio_queue_handle;
+        
+    #if CONFIG_MESHENGER_DEVICE_ID_A
+        static constexpr char kUnitId = 'A';
+    #elif CONFIG_MESHENGER_DEVICE_ID_B
+        static constexpr char kUnitId = 'B';
+    #endif
 
     gpio_num_t button_pin = GPIO_NUM_0;
     button_t main_btn;
@@ -30,6 +30,8 @@ class AppController {
 public:
     AppController();
     void init();
+    void status_update();
+    void status_received(const uint8_t* serialized_packet);
 };
 
 }

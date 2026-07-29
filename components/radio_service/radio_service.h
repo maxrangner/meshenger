@@ -6,7 +6,6 @@
 #include "esp_attr.h"
 #include "hal/ESP-IDF/EspHal.h"
 #include "button_driver.h"
-
 #include "packet.h"
 
 namespace radio {
@@ -14,9 +13,14 @@ namespace radio {
 const constexpr uint8_t kRadioPower = 14;
 const constexpr uint8_t kSpreadingFactor = 9;
 
-enum class RadioServiceEvent {
+enum class RadioCommandMessage {
     SEND_PACKET,
     RADIO_EVENT,
+};
+
+struct RadioCommand {
+    RadioCommandMessage message;
+    uint8_t payload[protocol::kPacketSize];
 };
 
 enum class RadioState {
@@ -42,11 +46,11 @@ private:
     int8_t radio_power = kRadioPower;
     uint8_t spreading_factor = kSpreadingFactor;
 
-    const char kUnitId = 'A';
-
     TaskHandle_t radio_task_handle = nullptr;
     static constexpr BaseType_t kTaskCore = 1;
     inline static QueueHandle_t radio_queue_handle = nullptr;
+
+    QueueHandle_t app_queue_handle = nullptr;
 
     uint8_t transmit_interval_ms;
 
@@ -61,12 +65,13 @@ private:
     static void radio_service_task(void* pvParameters);
     static void receive_task(void* pvParameters);
     void start_rx();
-    void read_new_packet(uint8_t* buffer, size_t length, protocol::Packet& packet);
-    int send(const uint8_t* buffer, size_t length);
+    void read_new_packet();
+    int transmit(const uint8_t* serialized_packet);
+    void transmit_complete();
 public:
     RadioService();
-    int init();
-    QueueHandle_t get_queue();
+    int init(QueueHandle_t queue);
+    void send_packet(const uint8_t* serialized_packet);
 };
 
 }

@@ -1,16 +1,5 @@
 menu "Meshenger configuration"
 
-    choice MESHENGER_DEVICE_ROLE
-        prompt "Device role"
-        default MESHENGER_ROLE_RECEIVER
-
-        config MESHENGER_ROLE_SENDER
-            bool "Sender"
-
-        config MESHENGER_ROLE_RECEIVER
-            bool "Receiver"
-    endchoice
-
     choice MESHENGER_DEVICE_ID
         prompt "Device ID"
         default MESHENGER_DEVICE_ID_A
@@ -25,10 +14,10 @@ menu "Meshenger configuration"
             bool "D"
     endchoice
 
-    config MESHENGER_SEND_INTERVAL_MS
-        int "Send interval (milliseconds)"
+    # config MESHENGER_SEND_INTERVAL_MS
+    #     int "Send interval (milliseconds)"
         # depends on MESHENGER_ROLE_SENDER
-        range 100 3600000
-        default 5000
+        # range 100 3600000
+        # default 5000
 
 endmenu
