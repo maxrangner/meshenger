@@ -5,8 +5,8 @@
 namespace protocol {
 
 constexpr uint8_t kPacketVersion = 1;
-constexpr uint8_t kPacketSize = 34;
-constexpr uint8_t kPayloadSize = 32;
+constexpr uint8_t kPacketSize = 61;
+constexpr uint8_t kPayloadSize = 40;
 
 struct Packet {
     uint8_t version;

@@ -39,7 +39,8 @@ void AppController::init() {
 
     uint8_t device_mac[6];
     ESP_ERROR_CHECK(esp_efuse_mac_get_default(device_mac));
-    device_id = utils::mac_converter(device_mac);
+    device_config.device_id = utils::mac_converter(device_mac);
+    device_config.group_id = 0;
 
     app_queue_handle = xQueueCreate(10, sizeof(AppEvent));
 
@@ -98,12 +99,14 @@ void AppController::status_update() {
     protocol::Packet packet;
     uint8_t buffer[protocol::kPacketSize];
 
-    packet.device_id = kUnitId;
     packet.version = protocol::kPacketVersion;
+    packet.group_id = device_config.group_id;
+    packet.device_id = device_config.device_id;
     char message[protocol::kPayloadSize] = {};
     static uint16_t num_packets = 0;
+    packet.message_id = num_packets++;
 
-    snprintf(message, sizeof(message), "Unit %c -Packet(v.%d)#%d", kUnitId, packet.version, num_packets++);
+    snprintf(message, sizeof(message), "%s", "Hello world!");
     memcpy(packet.payload, message, protocol::kPayloadSize);
 
     utils::serialize_packet(packet, buffer);
@@ -117,7 +120,7 @@ void AppController::status_received(const uint8_t* serialized_packet) {
     protocol::Packet packet;
     utils::deserialize_packet(serialized_packet, packet);
 
-    ESP_LOGI(TAG, "Packet received: Unit %c (v.%d): %s", packet.device_id, packet.version, packet.payload);
+    ESP_LOGI(TAG, "Packet received from unit %llx in group: %llu (message.id: %lu protocol v.%d): %s", packet.device_id, packet.group_id, packet.message_id, packet.version, packet.payload);
 }
 
 }

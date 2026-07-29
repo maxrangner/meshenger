@@ -2,6 +2,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "radio_service.h"
+#include "device_config.h"
 
 namespace app {
 
@@ -13,15 +14,15 @@ class AppController {
     TaskHandle_t app_task_handle = nullptr;
     QueueHandle_t app_queue_handle = nullptr;
     static constexpr BaseType_t kTaskCore = 0;
-    uint64_t device_id;
+    device::DeviceConfig device_config;
 
     radio::RadioService radio;
         
-    #if CONFIG_MESHENGER_DEVICE_ID_A
-        static constexpr char kUnitId = 'A';
-    #elif CONFIG_MESHENGER_DEVICE_ID_B
-        static constexpr char kUnitId = 'B';
-    #endif
+    // #if CONFIG_MESHENGER_DEVICE_ID_A
+    //     static constexpr char kUnitId = 'A';
+    // #elif CONFIG_MESHENGER_DEVICE_ID_B
+    //     static constexpr char kUnitId = 'B';
+    // #endif
 
     gpio_num_t button_pin = GPIO_NUM_0;
     button_t main_btn;
