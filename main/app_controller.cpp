@@ -1,5 +1,6 @@
 #include "app_controller.h"
 
+#include "esp_mac.h"
 #include "button_driver.h"
 #include "esp_log.h"
 #include "utils.h"
@@ -36,6 +37,10 @@ static void handle_button_callback(button_event_t event, gpio_num_t gpio_num, vo
 void AppController::init() {
     ESP_LOGI(TAG, "AppController init");
 
+    uint8_t device_mac[6];
+    ESP_ERROR_CHECK(esp_efuse_mac_get_default(device_mac));
+    device_id = utils::mac_converter(device_mac);
+
     app_queue_handle = xQueueCreate(10, sizeof(AppEvent));
 
     int state = radio.init(app_queue_handle);
@@ -68,7 +73,6 @@ void AppController::app_task(void* pvParameters) {
     ESP_LOGI(TAG, "Running app task on core %d", kTaskCore);
 
     AppEvent event;
-    radio::RadioCommandMessage radio_event;
 
     while(true) {
         xQueueReceive(self->app_queue_handle, &event, portMAX_DELAY);
@@ -94,7 +98,7 @@ void AppController::status_update() {
     protocol::Packet packet;
     uint8_t buffer[protocol::kPacketSize];
 
-    packet.sender_id = kUnitId;
+    packet.device_id = kUnitId;
     packet.version = protocol::kPacketVersion;
     char message[protocol::kPayloadSize] = {};
     static uint16_t num_packets = 0;
@@ -113,7 +117,7 @@ void AppController::status_received(const uint8_t* serialized_packet) {
     protocol::Packet packet;
     utils::deserialize_packet(serialized_packet, packet);
 
-    ESP_LOGI(TAG, "Packet received: Unit %c (v.%d): %s", packet.sender_id, packet.version, packet.payload);
+    ESP_LOGI(TAG, "Packet received: Unit %c (v.%d): %s", packet.device_id, packet.version, packet.payload);
 }
 
 }

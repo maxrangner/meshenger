@@ -13,6 +13,7 @@ class AppController {
     TaskHandle_t app_task_handle = nullptr;
     QueueHandle_t app_queue_handle = nullptr;
     static constexpr BaseType_t kTaskCore = 0;
+    uint64_t device_id;
 
     radio::RadioService radio;
         
