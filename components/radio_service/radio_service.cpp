@@ -108,8 +108,6 @@ void RadioService::radio_service_task(void* pvParameters) {
     ESP_LOGI(TAG, "Running radio task on core %d", kTaskCore);
 
     RadioCommand incoming_command;
-    // uint8_t buffer[protocol::kPacketSize] = {};
-    // protocol::Packet packet = {};
 
     self->start_rx();
 
@@ -125,16 +123,22 @@ void RadioService::radio_service_task(void* pvParameters) {
                         break;
                     }
                 break;
-            case RadioCommandMessage::RADIO_EVENT:
-                switch (self->radio_state) {
-                    case RadioState::RECEIVING:
-                        self->read_new_packet();
-                        break;
-                    case RadioState::TRANSMITTING:
-                        self->transmit_complete();
-                        break;
+            case RadioCommandMessage::RADIO_EVENT:{
+                const uint32_t irq_flags = self->radio.getIrqFlags();
+
+                if ((irq_flags & RADIOLIB_SX126X_IRQ_RX_DONE) && self->radio_state == RadioState::RECEIVING) {
+                    self->read_new_packet();
+                } else if ((irq_flags & RADIOLIB_SX126X_IRQ_TX_DONE) && self->radio_state == RadioState::TRANSMITTING) {
+                    self->transmit_complete();
+                } else {
+                    ESP_LOGI(TAG, "Stale or unexpected IRQ flags: 0x%08lx", static_cast<unsigned long>(irq_flags));
+
+                    if (irq_flags != 0) {
+                        self->radio.clearIrqFlags(irq_flags);
                     }
+                }
                 break;
+            }
         }
     }
 }
