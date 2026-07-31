@@ -37,9 +37,7 @@ static void handle_button_callback(button_event_t event, gpio_num_t gpio_num, vo
 void AppController::init() {
     ESP_LOGI(TAG, "AppController init");
 
-    uint8_t device_mac[6];
-    ESP_ERROR_CHECK(esp_efuse_mac_get_default(device_mac));
-    device_config.device_id = utils::mac_converter(device_mac);
+    device_config.device_id = utils::get_mac_address();
     device_config.group_id = 0;
 
     app_queue_handle = xQueueCreate(10, sizeof(AppEvent));

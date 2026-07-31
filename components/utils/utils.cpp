@@ -1,6 +1,8 @@
 #include "utils.h"
 
 #include <cstdint>
+#include "freertos/FreeRTOS.h"
+#include "esp_mac.h"
 
 namespace utils {
 
@@ -53,11 +55,15 @@ void deserialize_packet(const uint8_t* buffer, protocol::Packet& packet) {
     packet.payload[protocol::kPayloadSize - 1] = '\0';
 }
 
-uint64_t mac_converter(const uint8_t* mac) {
+uint64_t get_mac_address() {
+    uint8_t device_mac[6];
+    ESP_ERROR_CHECK(esp_efuse_mac_get_default(device_mac));
+    
     uint64_t converted_mac = 0;
     for (int i = 0; i < 6; i++) {
-        converted_mac = (converted_mac << 8) | mac[i];
+        converted_mac = (converted_mac << 8) | device_mac[i];
     }
+
     return converted_mac;
 }
 
