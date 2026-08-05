@@ -17,7 +17,7 @@ struct MessageId {
 struct Packet {
     uint8_t version;
     MessageId message_id;
-    char payload[kPayloadSize];
+    uint8_t payload[kPayloadSize];
 };
 
 }

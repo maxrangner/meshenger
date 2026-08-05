@@ -7,25 +7,8 @@
 
 namespace app {
 
-constexpr const uint8_t kPacketScreenerBufferSize = 100;
-
 struct ButtonContext {
     QueueHandle_t queue;
-};
-
-enum class ScreenerResult {
-    SCR_OK,
-    SCR_ERROR_DUPLICATE,
-    SCR_ERROR_WRONG_GROUP
-};
-
-class PacketScreener {
-    uint64_t current_group_id;
-    protocol::MessageId newest_packets_seen[kPacketScreenerBufferSize] = {};
-    uint8_t seen_unit_count = 0;
-public:
-    PacketScreener(uint64_t group_id);
-    ScreenerResult screen_packet(const protocol::Packet& packet);
 };
 
 class AppController {
@@ -46,7 +29,11 @@ class AppController {
     button_t main_btn;
     ButtonContext btn_ctx;
 
+    uint8_t message_part_0 = 0;
+    uint8_t message_part_1 = 1;
+
     static void app_task(void* pvParameters);
+    void change_message();
     void switch_group();
 public:
     AppController();

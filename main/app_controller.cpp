@@ -6,33 +6,12 @@
 #include "utils.h"
 #include "app_message.h"
 #include "packet_screener.h"
+#include "preset_messages.h"
+
 
 const char* TAG = "app_controller";
 
 namespace app {
-
-PacketScreener::PacketScreener(uint64_t group_id): current_group_id(group_id) {}
-
-ScreenerResult PacketScreener::screen_packet(const protocol::Packet& packet) {
-    ScreenerResult result;
-
-    for (int i = 0; i < seen_unit_count; i++) {
-        if (packet.message_id.group_id == newest_packets_seen[i].group_id && packet.message_id.origin_device_id == newest_packets_seen[i].origin_device_id) {
-            if (packet.message_id.message_num > newest_packets_seen[i].message_num) {
-                newest_packets_seen[i] = packet.message_id;
-                return ScreenerResult::SCR_OK;
-            } else {
-                return ScreenerResult::SCR_ERROR_DUPLICATE;
-            }
-        }
-    }
-
-    if (seen_unit_count < kPacketScreenerBufferSize) {
-        newest_packets_seen[seen_unit_count++] = packet.message_id;
-    }
-
-    return ScreenerResult::SCR_OK;;
-}
 
 AppController::AppController() {
 }
@@ -104,8 +83,8 @@ void AppController::app_task(void* pvParameters) {
                 self->send_status_update();
                 break;
             case AppEventMessage::BUTTON_LONG_PRESS:
-                self->switch_group();
-                ESP_LOGI(TAG, "Switching group to: %llu.", self->device_config.group_id);
+                self->change_message();
+                // ESP_LOGI(TAG, "Switching group to: %llu.", self->device_config.group_id);
                 break;
             case AppEventMessage::MESSAGE_RECEIVED:
                 self->status_update_received(event.payload);
@@ -113,6 +92,16 @@ void AppController::app_task(void* pvParameters) {
             default:
                 break;
         }
+    }
+}
+
+void AppController::change_message() {
+    if (message_part_0 == 0) {
+        message_part_0 = 1;
+        message_part_1 = 0;
+    } else {
+        message_part_0 = 0;
+        message_part_1 = 1;
     }
 }
 
@@ -127,18 +116,20 @@ void AppController::switch_group() {
 void AppController::send_status_update() {
     ESP_LOGI(TAG, "Update status.");
 
-    protocol::Packet packet;
+    protocol::Packet packet{};
     uint8_t buffer[protocol::kPacketSize];
 
     packet.version = protocol::kPacketVersion;
     packet.message_id.group_id = device_config.group_id;
     packet.message_id.origin_device_id = device_config.origin_device_id;
-    char message[protocol::kPayloadSize] = {};
     static uint16_t num_packets = 0;
     packet.message_id.message_num = num_packets++;
-
-    snprintf(message, sizeof(message), "%s", "Hello world!");
-    memcpy(packet.payload, message, protocol::kPayloadSize);
+    
+    uint8_t numParts = 2;
+    packet.payload[0] = numParts;
+    packet.payload[1] = message_part_0;
+    packet.payload[2] = message_part_1;
+    ESP_LOGI(TAG, "Update to send: %s %s", message_parts[message_part_0], message_parts[message_part_1]);
 
     utils::serialize_packet(packet, buffer);
 
@@ -152,7 +143,10 @@ void AppController::status_update_received(const uint8_t* serialized_packet) {
     utils::deserialize_packet(serialized_packet, packet);
 
     if (protocol::is_packet_for_group(device_config.group_id, packet)) {
-        ESP_LOGI(TAG, "Packet received from unit %llx in group: %llu (message.id: %lu protocol v.%d): %s", packet.message_id.origin_device_id, packet.message_id.group_id, packet.message_id.message_num, packet.version, packet.payload);
+        ESP_LOGI(TAG, "Packet received from unit %llx in group: %llu (message.id: %lu protocol v.%d):", packet.message_id.origin_device_id, packet.message_id.group_id, packet.message_id.message_num, packet.version);
+        for (int i = 0; i < packet.payload[0]; i++) {
+            ESP_LOGI(TAG, "%s", message_parts[packet.payload[i + 1]]);
+        }
     } else {
         ESP_LOGI(TAG, "Packet from other group received. Relaying.");
         // Relay packet
