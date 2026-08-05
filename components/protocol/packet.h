@@ -6,7 +6,7 @@ namespace protocol {
 
 constexpr uint8_t kPacketVersion = 1;
 constexpr uint8_t kPacketSize = 61;
-constexpr uint8_t kPayloadSize = 40;
+constexpr uint8_t kPayloadSize = 4;
 
 struct MessageId {
     uint64_t group_id;
