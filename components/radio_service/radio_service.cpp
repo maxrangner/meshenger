@@ -1,5 +1,6 @@
 #include "radio_service.h"
 
+#include <cstring>
 #include "utils.h"
 #include "sdkconfig.h"
 #include "esp_log.h"
@@ -8,8 +9,6 @@
 static const char *TAG = "RadioService";
 
 namespace radio {
-
-
 
 RadioService::RadioService() : hal(spi_sck_pin, spi_miso_pin, spi_mosi_pin),
                                module(&hal, spi_cs_pin, sx1262_dio1_pin, sx1262_reset_pin, sx1262_busy_pin),
@@ -127,6 +126,7 @@ void RadioService::start_rx() {
 bool RadioService::read_new_packet(uint8_t* receive_buffer) {
     ESP_LOGI(TAG, "Reading new packet.");
 
+    memset(receive_buffer, 0, protocol::kSerializedPacketSize);
     int state = radio.readData(receive_buffer, protocol::kSerializedPacketSize);
 
     // Handle error

@@ -1,8 +1,11 @@
 #include "mesh_service.h"
 
 #include "esp_log.h"
+#include "nvs_flash.h"
+#include "esp_err.h"
 #include "utils.h"
 #include "app_message.h"
+#include "device_config_storage.h"
 
 static const char *TAG = "MeshService";
 
@@ -20,13 +23,20 @@ void IRAM_ATTR MeshService::irq_event() {
 void MeshService::init(QueueHandle_t app_queue) {
     mesh_queue_handle = xQueueCreate(10, sizeof(MeshCommand));
     app_queue_handle = app_queue;
-
-    device_config.origin_device_id = utils::get_mac_address();
-    device_config.group_id = 0;
+    
+    init_nvs();
+    if (!loadDeviceSettings(&device_config)) {
+        ESP_LOGI(TAG, "No stored settings loaded, using defaults");
+        device_config.protocol_version = 1;
+        device_config.dictionary_version = 1;
+        device_config.origin_device_id = utils::get_mac_address();
+        device_config.group_id = 0;
+    }
 
     int state = radio.init(&irq_event);
     if (state != RADIOLIB_ERR_NONE) {
         ESP_LOGI(TAG, "Radio failed to initialize, code %d", state);
+        return;
     }
 
     xTaskCreatePinnedToCore(
@@ -38,6 +48,15 @@ void MeshService::init(QueueHandle_t app_queue) {
         &mesh_task_handle,            // Task handle.
         kTaskCore                     // Core where the task should run
     );
+}
+
+void MeshService::init_nvs() {
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
 }
 
 void MeshService::mesh_service_task(void* pvParameters) {
@@ -96,7 +115,7 @@ radio::RadioResult MeshService::handle_send_payload(uint8_t *payload) {
     packet.version = protocol::kPacketVersion;
     packet.message_id.group_id = device_config.group_id;
     packet.message_id.origin_device_id = device_config.origin_device_id;
-    static uint16_t num_packets = 0;
+    static uint32_t num_packets = 0;
     packet.message_id.message_num = num_packets++;
 
     packet.payload[0] = payload[0];

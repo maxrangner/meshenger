@@ -10,8 +10,4 @@ extern "C" void app_main(void)
     static app::AppController app_controller;
 
     app_controller.init();
-
-    while (true) {
-        vTaskDelay(portMAX_DELAY);
-    }
 }

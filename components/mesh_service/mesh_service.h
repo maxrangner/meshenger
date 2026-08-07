@@ -25,7 +25,7 @@ class MeshService {
 
     QueueHandle_t app_queue_handle = nullptr;
 
-    DeviceConfig device_config;
+    DeviceConfig device_config{};
     radio::RadioService radio;
     PacketScreener screener;
 
@@ -33,6 +33,7 @@ class MeshService {
 
     static void IRAM_ATTR irq_event();
     static void mesh_service_task(void* pvParameters);
+    void init_nvs();
     radio::RadioResult handle_send_payload(uint8_t *payload);
     void handle_packet_received(uint8_t* serialized_packet);
 public:
