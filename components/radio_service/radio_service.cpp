@@ -9,16 +9,11 @@ static const char *TAG = "RadioService";
 
 namespace radio {
 
+
+
 RadioService::RadioService() : hal(spi_sck_pin, spi_miso_pin, spi_mosi_pin),
                                module(&hal, spi_cs_pin, sx1262_dio1_pin, sx1262_reset_pin, sx1262_busy_pin),
                                radio(&module) {
-}
-
-void IRAM_ATTR RadioService::radio_event() {
-    RadioCommand command;
-    command.message = RadioCommandMessage::RADIO_EVENT;
-
-    xQueueSendFromISR(radio_queue_handle, &command, nullptr);
 }
 
 int RadioService::init_radio() {
@@ -49,7 +44,6 @@ int RadioService::init_radio() {
 
     ESP_LOGI(TAG, "[SX1262] Initializing ... ");
 
-
     radio.setRfSwitchTable(rf_switch_pins, rf_switch_table);
 
     radio.tcxoVoltage = 1.8f;
@@ -73,8 +67,9 @@ int RadioService::init_radio() {
     return state;
 }
 
-int RadioService::init(QueueHandle_t app_queue) {
+int RadioService::init(void (*irq_callback)()) {
     ESP_LOGI(TAG, "Initializing RadioService...");
+
 
     int state = init_radio();
     if (state != RADIOLIB_ERR_NONE) {
@@ -83,64 +78,38 @@ int RadioService::init(QueueHandle_t app_queue) {
 
     ESP_LOGI(TAG, "RadioService and [SX1262] Initialized successfully");
 
-    radio_queue_handle = xQueueCreate(10, sizeof(radio::RadioCommand));
-    app_queue_handle = app_queue;
-
-    xTaskCreatePinnedToCore(
-        radio_service_task,        // Function to implement the task
-        "RadioServiceTask",        // Name of the task
-        8192,                      // Stack size in bytes
-        this,                      // Task input parameter
-        1,                         // Priority of the task
-        &radio_task_handle,        // Task handle.
-        kTaskCore                  // Core where the task should run
-    );
-
-    radio.setDio1Action(radio_event);
+    radio.setDio1Action(irq_callback);
     radio_state = RadioState::RECEIVING;
 
     return RADIOLIB_ERR_NONE;
 }
 
-void RadioService::radio_service_task(void* pvParameters) {
-    auto* self = static_cast<RadioService*>(pvParameters);
+RadioResult RadioService::handle_irq(uint8_t* receive_buffer) {
+    const uint32_t irq_flags = radio.getIrqFlags();
 
-    ESP_LOGI(TAG, "Running radio task on core %d", kTaskCore);
-
-    RadioCommand incoming_command;
-
-    self->start_rx();
-
-    while(true) {
-        xQueueReceive(self->radio_queue_handle, &incoming_command, portMAX_DELAY);
-        switch (incoming_command.message) {
-            case RadioCommandMessage::SEND_PACKET:
-                switch (self->radio_state) {
-                    case RadioState::RECEIVING:
-                        self->transmit(incoming_command.payload);
-                        break;
-                    default:
-                        break;
-                    }
-                break;
-            case RadioCommandMessage::RADIO_EVENT:{
-                const uint32_t irq_flags = self->radio.getIrqFlags();
-
-                if ((irq_flags & RADIOLIB_SX126X_IRQ_RX_DONE) && self->radio_state == RadioState::RECEIVING) {
-                    self->read_new_packet();
-                } else if ((irq_flags & RADIOLIB_SX126X_IRQ_TX_DONE) && self->radio_state == RadioState::TRANSMITTING) {
-                    self->transmit_complete();
-                } else {
-                    ESP_LOGI(TAG, "Stale or unexpected IRQ flags: 0x%08lx", static_cast<unsigned long>(irq_flags));
-
-                    if (irq_flags != 0) {
-                        self->radio.clearIrqFlags(irq_flags);
-                    }
-                }
-                break;
-            }
+    if ((irq_flags & RADIOLIB_SX126X_IRQ_RX_DONE) && radio_state == RadioState::RECEIVING) {
+        if (read_new_packet(receive_buffer)) {
+            return RadioResult::PACKET_RECEIVED;
+        } else {
+            return RadioResult::ERROR;
         }
+    } else if ((irq_flags & RADIOLIB_SX126X_IRQ_TX_DONE) && radio_state == RadioState::TRANSMITTING) {
+        transmit_complete();
+
+        // Handle error
+
+        return RadioResult::TRANSMIT_COMPLETE;
+    } else {
+        ESP_LOGI(TAG, "Stale or unexpected IRQ flags: 0x%08lx", static_cast<unsigned long>(irq_flags));
+
+        if (irq_flags != 0) {
+            radio.clearIrqFlags(irq_flags);
+        }
+
+        return RadioResult::ERROR;
     }
+
+    return RadioResult::NONE;
 }
 
 void RadioService::start_rx() {
@@ -155,43 +124,45 @@ void RadioService::start_rx() {
     }
 }
 
-void RadioService::read_new_packet() {
+bool RadioService::read_new_packet(uint8_t* receive_buffer) {
     ESP_LOGI(TAG, "Reading new packet.");
 
-    uint8_t incoming_packet[protocol::kPacketSize];
-    int state = radio.readData(incoming_packet, protocol::kPacketSize);
+    int state = radio.readData(receive_buffer, protocol::kSerializedPacketSize);
 
+    // Handle error
     if (state == RADIOLIB_ERR_NONE) {
-        AppEvent event;
-        event.message = AppEventMessage::MESSAGE_RECEIVED;
-        memcpy(event.payload, &incoming_packet, protocol::kPacketSize);
-
-        xQueueSend(app_queue_handle, &event, portMAX_DELAY);
         ESP_LOGI(TAG, "Packet received! Sending to AppController for processing...");
+        return true;
     } else if (state == RADIOLIB_ERR_RX_TIMEOUT) {
         ESP_LOGI(TAG, "Receive timeout");
     } else {
         ESP_LOGI(TAG, "Failed to start receiving, code %d", state);
     }
+    return false;
 }
 
-int RadioService::transmit(const uint8_t* serialized_packet) {
+RadioResult RadioService::transmit(const uint8_t* serialized_packet) {
     ESP_LOGI(TAG, "TX");
-
-    radio_state = RadioState::TRANSMITTING;
-
+    
+    if (radio_state != RadioState::RECEIVING) {
+        return RadioResult::RADIO_BUSY;
+    }
+    
     radio.standby();
-
-    int state = radio.startTransmit(serialized_packet, protocol::kPacketSize);
+    
+    radio_state = RadioState::TRANSMITTING;
+    int state = radio.startTransmit(serialized_packet, protocol::kSerializedPacketSize);
     if (state == RADIOLIB_ERR_NONE) {
         ESP_LOGI(TAG, "Transmission started!");
+
+        return RadioResult::TRANSMITTING;
     } else {
         radio_state = RadioState::RECEIVING; 
         radio.startReceive();
         ESP_LOGI(TAG, "Failed to start transmitting, code %d", state);
-    }
 
-    return state;
+        return RadioResult::ERROR;
+    }
 }
 
 void RadioService::transmit_complete() {
@@ -199,16 +170,6 @@ void RadioService::transmit_complete() {
     radio.finishTransmit();
     radio_state = RadioState::RECEIVING;
     start_rx();
-}
-
-void RadioService::send_packet(const uint8_t* serialized_packet) {
-    ESP_LOGI(TAG, "Send packet");
-
-    RadioCommand command;
-    command.message = RadioCommandMessage::SEND_PACKET;
-    memcpy(command.payload, serialized_packet, protocol::kPacketSize);
-
-    xQueueSend(radio_queue_handle, &command, portMAX_DELAY);
 }
 
 }

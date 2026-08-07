@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace device {
+namespace mesh {
 
 struct DeviceConfig {
     uint64_t group_id;

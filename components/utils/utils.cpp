@@ -49,10 +49,9 @@ void deserialize_packet(const uint8_t* buffer, protocol::Packet& packet) {
             (packet.message_id.message_num << 8) | buffer[i + 17];
     }
     
-    for (int i = 0; i < protocol::kPayloadSize - 1; i++) {
+    for (int i = 0; i < protocol::kPayloadSize; i++) {
         packet.payload[i] = static_cast<char>(buffer[i + 21]);
     }
-    packet.payload[protocol::kPayloadSize - 1] = '\0';
 }
 
 uint64_t get_mac_address() {

@@ -1,8 +1,8 @@
 #include "packet_screener.h"
 
-namespace protocol {
+namespace mesh {
 
-PacketScreener::PacketScreener(uint64_t group_id): current_group_id(group_id) {}
+PacketScreener::PacketScreener() {}
 
 ScreenerResult PacketScreener::screen_packet(const protocol::Packet& packet) {
     ScreenerResult result;
@@ -25,7 +25,7 @@ ScreenerResult PacketScreener::screen_packet(const protocol::Packet& packet) {
     return ScreenerResult::SCR_OK;;
 }
 
-bool is_packet_for_group(uint64_t group_id, const Packet& packet) {
+bool is_packet_for_group(uint64_t group_id, const protocol::Packet& packet) {
     return (group_id == packet.message_id.group_id);
 }
 

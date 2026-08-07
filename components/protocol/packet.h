@@ -5,19 +5,19 @@
 namespace protocol {
 
 constexpr uint8_t kPacketVersion = 1;
-constexpr uint8_t kPacketSize = 61;
+constexpr uint8_t kSerializedPacketSize = 25;
 constexpr uint8_t kPayloadSize = 4;
 
 struct MessageId {
-    uint64_t group_id;
-    uint64_t origin_device_id;
-    uint32_t message_num;
+    uint64_t group_id; // 8 bytes
+    uint64_t origin_device_id; // 8 bytes
+    uint32_t message_num; // 4 bytes
 };
 
-struct Packet {
-    uint8_t version;
-    MessageId message_id;
-    uint8_t payload[kPayloadSize];
+struct Packet { // 25 serialized bytes
+    uint8_t version; // 1 byte
+    MessageId message_id; // 20 bytes
+    uint8_t payload[kPayloadSize]; // 4 bytes
 };
 
 }

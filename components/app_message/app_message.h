@@ -2,6 +2,8 @@
 
 #include "packet.h"
 
+namespace app {
+
 enum class AppEventMessage {
     BUTTON_SHORT_PRESS,
     BUTTON_LONG_PRESS,
@@ -10,5 +12,8 @@ enum class AppEventMessage {
 
 struct AppEvent {
     AppEventMessage message;
-    uint8_t payload[protocol::kPacketSize];
+    uint64_t origin_device_id;
+    uint8_t payload[protocol::kPayloadSize];
 };
+
+}
