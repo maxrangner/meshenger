@@ -3,9 +3,10 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "esp_err.h"
-#include "utils.h"
 #include "app_message.h"
 #include "device_config_storage.h"
+#include "esp_mac.h"
+#include "utils.h"
 
 static const char *TAG = "MeshService";
 
@@ -29,7 +30,7 @@ void MeshService::init(QueueHandle_t app_queue) {
         ESP_LOGI(TAG, "No stored settings loaded, using defaults");
         device_config.protocol_version = 1;
         device_config.dictionary_version = 1;
-        device_config.origin_device_id = utils::get_mac_address();
+        device_config.origin_device_id = get_mac_address();
         device_config.group_id = 0;
     }
 
@@ -123,7 +124,7 @@ radio::RadioResult MeshService::handle_send_payload(uint8_t *payload) {
     packet.payload[2] = payload[2];
     packet.payload[3] = payload[3];
 
-    utils::serialize_packet(packet, buffer);
+    protocol::utils::serialize_packet(packet, buffer);
     radio::RadioResult result;
     result = radio.transmit(buffer);
 
@@ -132,7 +133,7 @@ radio::RadioResult MeshService::handle_send_payload(uint8_t *payload) {
     
 void MeshService::handle_packet_received(uint8_t* serialized_packet) {
     protocol::Packet packet;
-    utils::deserialize_packet(serialized_packet, packet);
+    protocol::utils::deserialize_packet(serialized_packet, packet);
 
     app::AppEvent event;
     event.message = app::AppEventMessage::MESSAGE_RECEIVED;
@@ -140,6 +141,18 @@ void MeshService::handle_packet_received(uint8_t* serialized_packet) {
     memcpy(event.payload, packet.payload, protocol::kPayloadSize);
 
     xQueueSend(app_queue_handle, &event, 0);
+}
+
+uint64_t MeshService::get_mac_address() {
+    uint8_t device_mac[6];
+    ESP_ERROR_CHECK(esp_efuse_mac_get_default(device_mac));
+    
+    uint64_t converted_mac = 0;
+    for (int i = 0; i < 6; i++) {
+        converted_mac = (converted_mac << 8) | device_mac[i];
+    }
+
+    return converted_mac;
 }
 
 }

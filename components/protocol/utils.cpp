@@ -1,10 +1,8 @@
 #include "utils.h"
 
 #include <cstdint>
-#include "freertos/FreeRTOS.h"
-#include "esp_mac.h"
 
-namespace utils {
+namespace protocol::utils {
 
 void serialize_packet(const protocol::Packet& packet, uint8_t* buffer) {
     buffer[0] = packet.version;
@@ -52,18 +50,6 @@ void deserialize_packet(const uint8_t* buffer, protocol::Packet& packet) {
     for (int i = 0; i < protocol::kPayloadSize; i++) {
         packet.payload[i] = static_cast<char>(buffer[i + 21]);
     }
-}
-
-uint64_t get_mac_address() {
-    uint8_t device_mac[6];
-    ESP_ERROR_CHECK(esp_efuse_mac_get_default(device_mac));
-    
-    uint64_t converted_mac = 0;
-    for (int i = 0; i < 6; i++) {
-        converted_mac = (converted_mac << 8) | device_mac[i];
-    }
-
-    return converted_mac;
 }
 
 }

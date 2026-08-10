@@ -36,6 +36,7 @@ class MeshService {
     void init_nvs();
     radio::RadioResult handle_send_payload(uint8_t *payload);
     void handle_packet_received(uint8_t* serialized_packet);
+    uint64_t get_mac_address();
 public:
     MeshService();
     void init(QueueHandle_t app_queue);

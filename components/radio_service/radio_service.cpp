@@ -1,7 +1,6 @@
 #include "radio_service.h"
 
 #include <cstring>
-#include "utils.h"
 #include "sdkconfig.h"
 #include "esp_log.h"
 #include "app_message.h"
