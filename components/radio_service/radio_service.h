@@ -14,16 +14,22 @@ const constexpr uint8_t kSpreadingFactor = 9;
 
 enum class RadioState {
     TRANSMITTING,
-    RECEIVING
+    RECEIVING,
+    ERROR
 };
 
-enum class RadioResult {
-    PACKET_RECEIVED,
+enum class RadioResultType {
+    FRAME_RECEIVED,
     TRANSMIT_COMPLETE,
     RADIO_BUSY,
     TRANSMITTING,
     ERROR,
     NONE
+};
+
+struct RadioResult {
+    RadioResultType type;
+    size_t received_size;
 };
 
 class RadioService {
@@ -52,14 +58,17 @@ private:
     
     void irq_event();
     int init_radio();
-    bool read_new_packet(uint8_t* receive_buffer);
-    void transmit_complete();
+    bool read_received_frame(uint8_t* receive_buffer);
+    RadioResult handle_receive_complete(uint8_t* receive_buffer);
+    RadioResult handle_transmit_complete();
+    bool is_rx_done(const uint32_t &irq_flags);
+    bool is_tx_done(const uint32_t &irq_flags);
 public:
     RadioService();
     int init(void (*irq_callback)());
-    void start_rx();
+    bool start_rx();
     RadioResult handle_irq(uint8_t* receive_buffer);
-    RadioResult transmit(const uint8_t* serialized_packet);
+    RadioResultType transmit(const uint8_t* serialized_packet);
 };
 
 }

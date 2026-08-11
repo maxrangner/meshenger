@@ -2,19 +2,20 @@
 
 #include "freertos/FreeRTOS.h"
 #include "packet.h"
-#include "device_config.h"
+#include "device_state.h"
 #include "radio_service.h"
 #include "packet_screener.h"
+#include "mesh_core.h"
 
 namespace mesh {
 
-enum class MeshCommandMessage {
+enum class MeshCommandType {
     SEND_PAYLOAD,
-    RADIO_EVENT,
+    RADIO_IRQ,
 };
 
 struct MeshCommand {
-    MeshCommandMessage message;
+    MeshCommandType type;
     uint8_t payload[protocol::kPayloadSize];
 };
 
@@ -25,17 +26,15 @@ class MeshService {
 
     QueueHandle_t app_queue_handle = nullptr;
 
-    DeviceConfig device_config{};
     radio::RadioService radio;
-    PacketScreener screener;
+    MeshCore core;
 
     uint8_t receive_buffer[protocol::kSerializedPacketSize]{};
 
-    static void IRAM_ATTR irq_event();
+    static void IRAM_ATTR radio_irq_callback();
     static void mesh_service_task(void* pvParameters);
-    void init_nvs();
-    radio::RadioResult handle_send_payload(uint8_t *payload);
-    void handle_packet_received(uint8_t* serialized_packet);
+    radio::RadioResultType handle_send_payload(uint8_t *payload);
+    void handle_received_frame(uint8_t* serialized_packet, size_t received_size);
     uint64_t get_mac_address();
 public:
     MeshService();

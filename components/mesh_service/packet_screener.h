@@ -7,9 +7,11 @@ namespace mesh {
 constexpr uint8_t kPacketScreenerBufferSize = 30;
 
 enum class ScreenerResult {
-    SCR_OK,
-    SCR_ERROR_DUPLICATE,
-    SCR_ERROR_WRONG_GROUP
+    SAME_GROUP_NEW,
+    SAME_GROUP_RELAY,
+    OTHER_GROUP_NEW,
+    OTHER_GROUP_RELAY,
+    DISCARD
 };
 
 class PacketScreener {

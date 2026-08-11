@@ -2,7 +2,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "radio_service.h"
-#include "device_config.h"
+#include "device_state.h"
 #include "packet.h"
 #include "mesh_service.h"
 #include "button_driver.h"
@@ -29,6 +29,7 @@ class AppController {
     uint8_t message_part_1 = 1;
 
     static void app_task(void* pvParameters);
+    void init_nvs();
 public:
     AppController();
     void init();

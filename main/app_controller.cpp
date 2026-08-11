@@ -1,5 +1,6 @@
 #include "app_controller.h"
 
+#include "nvs_flash.h"
 #include "esp_mac.h"
 #include "esp_log.h"
 #include "utils.h"
@@ -38,6 +39,8 @@ static void handle_button_callback(button_event_t event, gpio_num_t gpio_num, vo
 
 void AppController::init() {
     ESP_LOGI(TAG, "AppController init");
+
+    init_nvs();
 
     app_queue_handle = xQueueCreate(10, sizeof(AppEvent));
     xTaskCreatePinnedToCore(
@@ -89,9 +92,9 @@ void AppController::send_update() {
     // TODO: Construct status update through UI
 
     uint8_t payload[protocol::kPayloadSize]{};
-    payload[0] = 2;
-    payload[1] = message_part_0;
-    payload[2] = message_part_1;
+    payload[0] = 2; // Message length
+    payload[1] = message_part_0; // Phrase one
+    payload[2] = message_part_1; // Phrase two
 
     ESP_LOGI(TAG, "Send payload message: %s, %s", message_parts[message_part_0], message_parts[message_part_1]);
 
@@ -101,6 +104,15 @@ void AppController::send_update() {
 void AppController::handle_received_update(uint64_t origin_device_id, uint8_t *payload) {
     ESP_LOGI(TAG, "New status update received!");
     ESP_LOGI(TAG, "Message: %s, %s", message_parts[payload[1]], message_parts[payload[2]]);
+}
+
+void AppController::init_nvs() {
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
 }
 
 }

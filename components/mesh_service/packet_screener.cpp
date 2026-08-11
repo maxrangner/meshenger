@@ -11,9 +11,9 @@ ScreenerResult PacketScreener::screen_packet(const protocol::Packet& packet) {
         if (packet.message_id.group_id == newest_packets_seen[i].group_id && packet.message_id.origin_device_id == newest_packets_seen[i].origin_device_id) {
             if (packet.message_id.message_num > newest_packets_seen[i].message_num) {
                 newest_packets_seen[i] = packet.message_id;
-                return ScreenerResult::SCR_OK;
+                return ScreenerResult::SAME_GROUP_NEW;
             } else {
-                return ScreenerResult::SCR_ERROR_DUPLICATE;
+                return ScreenerResult::SAME_GROUP_NEW;
             }
         }
     }
@@ -22,7 +22,7 @@ ScreenerResult PacketScreener::screen_packet(const protocol::Packet& packet) {
         newest_packets_seen[seen_unit_count++] = packet.message_id;
     }
 
-    return ScreenerResult::SCR_OK;;
+    return ScreenerResult::SAME_GROUP_NEW;;
 }
 
 bool is_packet_for_group(uint64_t group_id, const protocol::Packet& packet) {

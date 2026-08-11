@@ -1,4 +1,4 @@
-#include "device_config_storage.h"
+#include "device_state_storage.h"
 
 #include "esp_log.h"
 #include "nvs.h"
@@ -7,12 +7,12 @@ static const char* TAG = "settings storage";
 
 namespace mesh {
 
-bool loadDeviceSettings(DeviceConfig* config) {
-    if (config == nullptr) {
+bool loadDeviceSettings(DeviceState* state) {
+    if (state == nullptr) {
         return false;
     }
 
-    DeviceConfig loaded_config{};
+    DeviceState loaded_config{};
 
     nvs_handle_t handle;
     esp_err_t err = nvs_open("device", NVS_READONLY, &handle);
@@ -43,7 +43,7 @@ bool loadDeviceSettings(DeviceConfig* config) {
         ESP_LOGW(TAG, "nvs_get failed: %s", esp_err_to_name(err));
         return false;
     }
-    err = nvs_get_u64(handle, "origin_id", &loaded_config.origin_device_id);
+    err = nvs_get_u64(handle, "origin_id", &loaded_config.device_id);
     if (err != ESP_OK) {
         nvs_close(handle);
         ESP_LOGW(TAG, "nvs_get failed: %s", esp_err_to_name(err));
@@ -57,12 +57,12 @@ bool loadDeviceSettings(DeviceConfig* config) {
     //     return false;
     // }
 
-    *config = loaded_config;
+    *state = loaded_config;
     return true;
 }
 
-bool saveDeviceSettings(const DeviceConfig& config) {
-    DeviceConfig config_to_save = config;
+bool saveDeviceSettings(const DeviceState& state) {
+    DeviceState config_to_save = state;
     config_to_save.protocol_version = 1;
 
     nvs_handle_t handle;
@@ -90,7 +90,7 @@ bool saveDeviceSettings(const DeviceConfig& config) {
         nvs_close(handle);
         return false;
     }
-    err = nvs_set_u64(handle, "origin_id", config_to_save.origin_device_id);
+    err = nvs_set_u64(handle, "origin_id", config_to_save.device_id);
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "nvs_set failed: %s", esp_err_to_name(err));
         nvs_close(handle);

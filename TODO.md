@@ -1,4 +1,7 @@
 # TODO
+## MeshService is untestable
+Solution: Separate MeshService into MeshCore and thin layer MeshService
+
 ## Payload vocabulary index can be out of range
 Solution: Validate received packets. Size, values and version.
 
@@ -23,3 +26,7 @@ Solution: Move setting of MAC into separate default device init function.
 ## Add host tests
 
 ## Adjust task priority
+
+---
+
+## MeshService::send_payload() should return bool, and AppController check if request was accepted into queue
