@@ -31,10 +31,9 @@ class AppController {
     static void app_task(void* pvParameters);
     void init_nvs();
 public:
-    AppController();
     void init();
     void send_update();
-    void handle_received_update(uint64_t origin_device_id, uint8_t *payload);
+    void handle_received_update(uint64_t origin_device_id, protocol::Payload payload);
 };
 
 }

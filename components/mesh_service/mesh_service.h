@@ -16,7 +16,7 @@ enum class MeshCommandType {
 
 struct MeshCommand {
     MeshCommandType type;
-    uint8_t payload[protocol::kPayloadSize];
+    protocol::Payload payload;
 };
 
 class MeshService {
@@ -33,13 +33,12 @@ class MeshService {
 
     static void IRAM_ATTR radio_irq_callback();
     static void mesh_service_task(void* pvParameters);
-    radio::RadioResultType handle_send_payload(uint8_t *payload);
+    radio::RadioResultType handle_send_payload(protocol::Payload& payload);
     void handle_received_frame(uint8_t* serialized_packet, size_t received_size);
     uint64_t get_mac_address();
 public:
-    MeshService();
     void init(QueueHandle_t app_queue);
-    void send_payload(uint8_t *payload);
+    void send_payload(protocol::Payload& payload);
 };
 
 }

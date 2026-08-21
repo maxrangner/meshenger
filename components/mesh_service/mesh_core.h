@@ -7,6 +7,7 @@
 namespace mesh {
 
 enum class IncomingResultMessage {
+    DELIVER_AND_RELAY,
     DELIVER,
     RELAY,
     DISCARD
@@ -27,7 +28,7 @@ class MeshCore {
     PacketScreener screener;
 public:
     void set_device_state(DeviceState loaded_state);
-    OutgoingResult create_packet(const uint8_t *payload);
+    OutgoingResult create_outgoing_packet(const protocol::Payload& payload);
     IncomingResult process_incoming_packet(protocol::Packet incoming_packet);
 };
 

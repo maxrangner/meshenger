@@ -1,23 +1,19 @@
 menu "Meshenger configuration"
 
-    choice MESHENGER_DEVICE_ID
-        prompt "Device ID"
-        default MESHENGER_DEVICE_ID_A
+    config MESHENGER_OVERRIDE_DEVICE_CONFIG
+        bool "Override stored device configuration"
+        default n
+        help
+            Use build-time device configuration instead of the configuration
+            stored in NVS.
 
-        config MESHENGER_DEVICE_ID_A
-            bool "A"
-        config MESHENGER_DEVICE_ID_B
-            bool "B"
-        config MESHENGER_DEVICE_ID_C
-            bool "C"
-        config MESHENGER_DEVICE_ID_D
-            bool "D"
-    endchoice
+    config MESHENGER_GROUP_ID
+        int "Group ID"
+        depends on MESHENGER_OVERRIDE_DEVICE_CONFIG
+        range 0 3
+        default 0
 
-    # config MESHENGER_SEND_INTERVAL_MS
-    #     int "Send interval (milliseconds)"
-        # depends on MESHENGER_ROLE_SENDER
-        # range 100 3600000
-        # default 5000
+        help
+            Group ID used when device configuration override is enabled.
 
 endmenu

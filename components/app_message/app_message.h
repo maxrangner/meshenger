@@ -13,7 +13,7 @@ enum class AppEventMessage {
 struct AppEvent {
     AppEventMessage message;
     uint64_t origin_device_id;
-    uint8_t payload[protocol::kPayloadSize];
+    protocol::Payload payload;
 };
 
 }

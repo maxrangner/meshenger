@@ -1,5 +1,6 @@
 #include "mesh_service.h"
 
+#include "sdkconfig.h"
 #include "esp_log.h"
 #include "esp_err.h"
 #include "app_message.h"
@@ -10,8 +11,6 @@
 static const char *TAG = "MeshService";
 
 namespace mesh {
-
-MeshService::MeshService() {}
 
 void IRAM_ATTR MeshService::radio_irq_callback() {
     mesh::MeshCommand command;
@@ -33,6 +32,10 @@ void MeshService::init(QueueHandle_t app_queue) {
         device_state.group_id = 0;
         device_state.packet_count = 0;
     }
+    #ifdef CONFIG_MESHENGER_OVERRIDE_DEVICE_CONFIG
+        device_state.group_id = static_cast<uint64_t>(CONFIG_MESHENGER_GROUP_ID);
+    #endif
+
     core.set_device_state(device_state);
 
     int state = radio.init(&radio_irq_callback);
@@ -87,18 +90,18 @@ void MeshService::mesh_service_task(void* pvParameters) {
     }
 }
 
-void MeshService::send_payload(uint8_t *payload) {
+void MeshService::send_payload(protocol::Payload& payload) {
     ESP_LOGI(TAG, "Sending payload to mesh queue...");
 
     MeshCommand command;
     command.type = MeshCommandType::SEND_PAYLOAD;
-    memcpy(command.payload, payload, protocol::kPayloadSize);
+    command.payload = payload;
 
     xQueueSend(mesh_queue_handle, &command, 0);
 }
 
-radio::RadioResultType MeshService::handle_send_payload(uint8_t *payload) {
-    OutgoingResult outgoing = core.create_packet(payload);
+radio::RadioResultType MeshService::handle_send_payload(protocol::Payload& payload) {
+    OutgoingResult outgoing = core.create_outgoing_packet(payload);
 
     if (!saveDeviceSettings(outgoing.state)) {
         return radio::RadioResultType::ERROR;
@@ -112,21 +115,31 @@ radio::RadioResultType MeshService::handle_send_payload(uint8_t *payload) {
     
 void MeshService::handle_received_frame(uint8_t* serialized_packet, size_t received_size) {
     protocol::Packet packet;
-    protocol::utils::deserialize_packet(serialized_packet, packet);
+    if (!protocol::utils::deserialize_packet(serialized_packet, received_size, packet)) {
+        ESP_LOGW(TAG, "Frame received with incorrect size.");
+        return;
+    }
 
     IncomingResult incoming = core.process_incoming_packet(packet);
 
-    if (incoming.message == IncomingResultMessage::DELIVER) {
-        app::AppEvent event;
-        event.message = app::AppEventMessage::MESSAGE_RECEIVED;
-        event.origin_device_id = packet.message_id.origin_device_id;
-        memcpy(event.payload, packet.payload, protocol::kPayloadSize);
-    
-        xQueueSend(app_queue_handle, &event, 0);
-    } else if (incoming.message == IncomingResultMessage::RELAY) {
-        // Relay package
-    } else {
-        // Discard
+    switch (incoming.message) {
+        case IncomingResultMessage::DELIVER_AND_RELAY: {
+            app::AppEvent event;
+            event.message = app::AppEventMessage::MESSAGE_RECEIVED;
+            event.origin_device_id = packet.message_id.origin_device_id;
+            event.payload = packet.payload;
+        
+            xQueueSend(app_queue_handle, &event, 0);
+            break;
+        }
+
+        case IncomingResultMessage::DELIVER:
+            break;
+        case IncomingResultMessage::RELAY:
+            ESP_LOGI(TAG, "MESH -> RELAY PACKET");
+            break;
+        case IncomingResultMessage::DISCARD:
+            break;
     }
 }
 

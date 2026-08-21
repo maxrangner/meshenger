@@ -14,10 +14,14 @@ struct MessageId {
     uint32_t message_num; // 4 bytes
 };
 
+struct Payload {
+    uint8_t bytes[kPayloadSize]{}; // 4 bytes
+};
+
 struct Packet { // 25 serialized bytes
     uint8_t version; // 1 byte
     MessageId message_id; // 20 bytes
-    uint8_t payload[kPayloadSize]; // 4 bytes
+    Payload payload; // 4 bytes
 };
 
 }

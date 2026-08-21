@@ -23,11 +23,15 @@ void serialize_packet(const protocol::Packet& packet, uint8_t* buffer) {
     }
 
     for (int i = 0; i < protocol::kPayloadSize; i++) {
-        buffer[i + 21] = static_cast<uint8_t>(packet.payload[i]);
+        buffer[i + 21] = static_cast<uint8_t>(packet.payload.bytes[i]);
     }
 }
 
-void deserialize_packet(const uint8_t* buffer, protocol::Packet& packet) {
+bool deserialize_packet(const uint8_t* buffer, size_t received_size, protocol::Packet& packet) {
+    if (received_size != protocol::kSerializedPacketSize) {
+        return false;
+    }
+
     packet.version = static_cast<uint8_t>(buffer[0]);
 
     packet.message_id.group_id = 0;
@@ -48,8 +52,10 @@ void deserialize_packet(const uint8_t* buffer, protocol::Packet& packet) {
     }
     
     for (int i = 0; i < protocol::kPayloadSize; i++) {
-        packet.payload[i] = static_cast<char>(buffer[i + 21]);
+        packet.payload.bytes[i] = static_cast<char>(buffer[i + 21]);
     }
+
+    return true;
 }
 
 }

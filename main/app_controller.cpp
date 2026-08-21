@@ -13,9 +13,6 @@ const char* TAG = "app_controller";
 
 namespace app {
 
-AppController::AppController() {
-}
-
 static void handle_button_callback(button_event_t event, gpio_num_t gpio_num, void *user_data) {
     auto* context = static_cast<ButtonContext*>(user_data);
 
@@ -91,19 +88,19 @@ void AppController::app_task(void* pvParameters) {
 void AppController::send_update() {
     // TODO: Construct status update through UI
 
-    uint8_t payload[protocol::kPayloadSize]{};
-    payload[0] = 2; // Message length
-    payload[1] = message_part_0; // Phrase one
-    payload[2] = message_part_1; // Phrase two
+    protocol::Payload payload{};
+    payload.bytes[0] = 2; // Message length
+    payload.bytes[1] = message_part_0; // Phrase one
+    payload.bytes[2] = message_part_1; // Phrase two
 
     ESP_LOGI(TAG, "Send payload message: %s, %s", message_parts[message_part_0], message_parts[message_part_1]);
 
     mesh.send_payload(payload);
 }
 
-void AppController::handle_received_update(uint64_t origin_device_id, uint8_t *payload) {
+void AppController::handle_received_update(uint64_t origin_device_id, protocol::Payload payload) {
     ESP_LOGI(TAG, "New status update received!");
-    ESP_LOGI(TAG, "Message: %s, %s", message_parts[payload[1]], message_parts[payload[2]]);
+    ESP_LOGI(TAG, "Message: %s, %s", message_parts[payload.bytes[1]], message_parts[payload.bytes[2]]);
 }
 
 void AppController::init_nvs() {
