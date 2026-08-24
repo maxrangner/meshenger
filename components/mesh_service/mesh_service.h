@@ -9,13 +9,13 @@
 
 namespace mesh {
 
-enum class MeshCommandType {
-    SEND_PAYLOAD,
-    RADIO_IRQ,
+enum class MeshEventType {
+    SendRequested,
+    RadioInterrupt,
 };
 
-struct MeshCommand {
-    MeshCommandType type;
+struct MeshEvent {
+    MeshEventType type;
     protocol::Payload payload;
 };
 
@@ -33,12 +33,14 @@ class MeshService {
 
     static void IRAM_ATTR radio_irq_callback();
     static void mesh_service_task(void* pvParameters);
-    radio::RadioResultType handle_send_payload(protocol::Payload& payload);
-    void handle_received_frame(uint8_t* serialized_packet, size_t received_size);
+    radio::RadioResultType handle_send_payload(const protocol::Payload& payload);
+    void handle_received_frame(uint8_t* serialized_packet, const size_t received_size);
+    radio::RadioResultType relay_packet(protocol::Packet& packet);
+    void deliver_message_to_app(const protocol::Packet& packet);
     uint64_t get_mac_address();
 public:
     void init(QueueHandle_t app_queue);
-    void send_payload(protocol::Payload& payload);
+    void send_payload(const protocol::Payload& payload);
 };
 
 }

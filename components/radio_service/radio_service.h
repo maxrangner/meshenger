@@ -9,22 +9,22 @@
 
 namespace radio {
 
-const constexpr uint8_t kRadioPower = 14;
-const constexpr uint8_t kSpreadingFactor = 9;
+constexpr uint8_t kRadioPower = 14;
+constexpr uint8_t kSpreadingFactor = 9;
 
 enum class RadioState {
-    TRANSMITTING,
-    RECEIVING,
-    ERROR
+    Transmitting,
+    Receiving,
+    Error
 };
 
 enum class RadioResultType {
-    FRAME_RECEIVED,
-    TRANSMIT_COMPLETE,
-    RADIO_BUSY,
-    TRANSMITTING,
-    ERROR,
-    NONE
+    FrameReceived,
+    TransmissionComplete,
+    RadioBusy,
+    TransmissionStarted,
+    Error,
+    None
 };
 
 struct RadioResult {
@@ -49,14 +49,12 @@ private:
 
     int8_t radio_power = kRadioPower;
     uint8_t spreading_factor = kSpreadingFactor;
-    uint8_t transmit_interval_ms;
 
     EspHal hal;
     Module module;
     SX1262 radio;
     RadioState radio_state;
     
-    void irq_event();
     int init_radio();
     bool read_received_frame(uint8_t* receive_buffer);
     RadioResult handle_receive_complete(uint8_t* receive_buffer);
@@ -72,4 +70,3 @@ public:
 };
 
 }
-

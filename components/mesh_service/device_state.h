@@ -6,10 +6,10 @@ namespace mesh {
 
 struct DeviceState {
     uint8_t protocol_version;
-    uint8_t dictionary_version;
+    uint8_t phrase_dictionary_version;
     uint64_t group_id;
     uint64_t device_id;
-    uint32_t packet_count;
+    uint32_t next_sequence_num;
 };
 
 }

@@ -4,26 +4,30 @@
 
 namespace mesh {
 
-constexpr uint8_t kPacketScreenerBufferSize = 30;
+constexpr uint8_t kMaxTrackedSources = 30;
 
 enum class ScreenerResult {
-    SAME_GROUP_NEW,
-    SAME_GROUP_OLD,
-    OTHER_GROUP_NEW,
-    OTHER_GROUP_OLD,
-    DISCARD
+    NewLocalGroupPacket,
+    StaleLocalGroupPacket,
+    NewForeignGroupPacket,
+    StaleForeignGroupPacket,
+    Rejected
 };
 
 class PacketScreener {
-    uint64_t current_group_id;
-    uint64_t current_device_id;
-    protocol::MessageId newest_packets_seen[kPacketScreenerBufferSize]{};
-    uint8_t seen_unit_count = 0;
+    uint64_t local_group_id;
+    uint64_t local_device_id;
+    protocol::MessageId latest_message_ids[kMaxTrackedSources]{};
+    uint8_t tracked_source_counts = 0;
+    bool is_current_device(const protocol::Packet& packet) const;
+    bool is_packet_for_group(const protocol::Packet& packet) const;
+    bool is_packet_matching(const protocol::Packet& packet, uint8_t i) const;
+    bool is_packet_fresh(const protocol::Packet& packet, uint8_t i) const;
+    bool is_buffer_full();
 public:
     void set_device_state(const uint64_t group, const uint64_t device);
-    ScreenerResult process_packet(const protocol::Packet& packet);
+    ScreenerResult screen_packet(const protocol::Packet& packet);
 };
 
-bool is_packet_for_group(uint64_t group_id, const protocol::Packet& packet);
 
 }

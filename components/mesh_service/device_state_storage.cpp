@@ -3,19 +3,19 @@
 #include "esp_log.h"
 #include "nvs.h"
 
-static const char* TAG = "settings storage";
+constexpr char TAG[] = "settings storage";
 
 namespace mesh {
 
-bool loadDeviceSettings(DeviceState* state) {
+bool load_device_settings(DeviceState* state) {
     if (state == nullptr) {
         return false;
     }
 
     DeviceState loaded_config{};
 
-    nvs_handle_t handle;
-    esp_err_t err = nvs_open("device", NVS_READONLY, &handle);
+    nvs_handle_t nvs_handle;
+    esp_err_t err = nvs_open("device", NVS_READONLY, &nvs_handle);
     if (err == ESP_ERR_NVS_NOT_FOUND) {
         ESP_LOGI(TAG, "No saved device settings");
         return false;
@@ -25,32 +25,32 @@ bool loadDeviceSettings(DeviceState* state) {
         return false;
     }
 
-    err = nvs_get_u8(handle, "proto_ver", &loaded_config.protocol_version);
+    err = nvs_get_u8(nvs_handle, "proto_ver", &loaded_config.protocol_version);
     if (err != ESP_OK) {
-        nvs_close(handle);
+        nvs_close(nvs_handle);
         ESP_LOGW(TAG, "nvs_get failed: %s", esp_err_to_name(err));
         return false;
     }
-    err = nvs_get_u8(handle, "dict_ver", &loaded_config.dictionary_version);
+    err = nvs_get_u8(nvs_handle, "dict_ver", &loaded_config.phrase_dictionary_version);
     if (err != ESP_OK) {
-        nvs_close(handle);
+        nvs_close(nvs_handle);
         ESP_LOGW(TAG, "nvs_get failed: %s", esp_err_to_name(err));
         return false;
     }
-    err = nvs_get_u64(handle, "group_id", &loaded_config.group_id);
+    err = nvs_get_u64(nvs_handle, "group_id", &loaded_config.group_id);
     if (err != ESP_OK) {
-        nvs_close(handle);
+        nvs_close(nvs_handle);
         ESP_LOGW(TAG, "nvs_get failed: %s", esp_err_to_name(err));
         return false;
     }
-    err = nvs_get_u64(handle, "origin_id", &loaded_config.device_id);
+    err = nvs_get_u64(nvs_handle, "origin_id", &loaded_config.device_id);
     if (err != ESP_OK) {
-        nvs_close(handle);
+        nvs_close(nvs_handle);
         ESP_LOGW(TAG, "nvs_get failed: %s", esp_err_to_name(err));
         return false;
     }
 
-    nvs_close(handle);
+    nvs_close(nvs_handle);
 
     // if (loaded_config.protocol_version != kDeviceSettingsVersion) {
     //     ESP_LOGW(TAG, "Saved settings version mismatch: %u", loaded_config.version);
@@ -61,49 +61,49 @@ bool loadDeviceSettings(DeviceState* state) {
     return true;
 }
 
-bool saveDeviceSettings(const DeviceState& state) {
-    DeviceState config_to_save = state;
-    config_to_save.protocol_version = 1;
+bool save_device_settings(const DeviceState& state) {
+    // DeviceState config_to_save = state;
+    // config_to_save.protocol_version = 1;
 
-    nvs_handle_t handle;
-    esp_err_t err = nvs_open("device", NVS_READWRITE, &handle);
+    nvs_handle_t nvs_handle;
+    esp_err_t err = nvs_open("device", NVS_READWRITE, &nvs_handle);
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "nvs_open write failed: %s", esp_err_to_name(err));
         return false;
     }
 
-    err = nvs_set_u8(handle, "proto_ver", config_to_save.protocol_version);
+    err = nvs_set_u8(nvs_handle, "proto_ver", state.protocol_version);
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "nvs_set failed: %s", esp_err_to_name(err));
-        nvs_close(handle);
+        nvs_close(nvs_handle);
         return false;
     }
-    err = nvs_set_u8(handle, "dict_ver", config_to_save.dictionary_version);
+    err = nvs_set_u8(nvs_handle, "dict_ver", state.phrase_dictionary_version);
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "nvs_set failed: %s", esp_err_to_name(err));
-        nvs_close(handle);
+        nvs_close(nvs_handle);
         return false;
     }
-    err = nvs_set_u64(handle, "group_id", config_to_save.group_id);
+    err = nvs_set_u64(nvs_handle, "group_id", state.group_id);
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "nvs_set failed: %s", esp_err_to_name(err));
-        nvs_close(handle);
+        nvs_close(nvs_handle);
         return false;
     }
-    err = nvs_set_u64(handle, "origin_id", config_to_save.device_id);
+    err = nvs_set_u64(nvs_handle, "origin_id", state.device_id);
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "nvs_set failed: %s", esp_err_to_name(err));
-        nvs_close(handle);
+        nvs_close(nvs_handle);
         return false;
     }
 
-    err = nvs_commit(handle);
+    err = nvs_commit(nvs_handle);
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "nvs_commit failed: %s", esp_err_to_name(err));
-        nvs_close(handle);
+        nvs_close(nvs_handle);
         return false;
     }
-    nvs_close(handle);
+    nvs_close(nvs_handle);
 
     return true;
 }

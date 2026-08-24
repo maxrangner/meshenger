@@ -24,7 +24,6 @@ class AppController {
     button_t main_btn;
     ButtonContext btn_ctx;
 
-    uint8_t received_message_buffer[protocol::kPayloadSize];
     uint8_t message_part_0 = 0;
     uint8_t message_part_1 = 1;
 
@@ -32,8 +31,8 @@ class AppController {
     void init_nvs();
 public:
     void init();
-    void send_update();
-    void handle_received_update(uint64_t origin_device_id, protocol::Payload payload);
+    void send_status_update();
+    void handle_received_status_update(const uint64_t origin_device_id, const protocol::Payload payload);
 };
 
 }

@@ -3,9 +3,9 @@
 #include <cstring>
 #include "sdkconfig.h"
 #include "esp_log.h"
-#include "app_message.h"
+#include "app_event.h"
 
-static const char *TAG = "RadioService";
+constexpr char TAG[] = "RadioService";
 
 namespace radio {
 
@@ -76,7 +76,7 @@ int RadioService::init(void (*irq_callback)()) {
     ESP_LOGI(TAG, "RadioService and [SX1262] Initialized successfully");
 
     radio.setDio1Action(irq_callback);
-    radio_state = RadioState::RECEIVING;
+    radio_state = RadioState::Receiving;
 
     return RADIOLIB_ERR_NONE;
 }
@@ -94,16 +94,16 @@ RadioResult RadioService::handle_irq(uint8_t* receive_buffer) {
         if (irq_flags != 0) {
             radio.clearIrqFlags(irq_flags);
         }
-        return {RadioResultType::ERROR, 0};
+        return {RadioResultType::Error, 0};
     }
 }
 
 bool RadioService::is_rx_done(const uint32_t &irq_flags) {
-    return ((irq_flags & RADIOLIB_SX126X_IRQ_RX_DONE) && radio_state == RadioState::RECEIVING);
+    return ((irq_flags & RADIOLIB_SX126X_IRQ_RX_DONE) && radio_state == RadioState::Receiving);
 }
 
 bool RadioService::is_tx_done(const uint32_t &irq_flags) {
-    return ((irq_flags & RADIOLIB_SX126X_IRQ_TX_DONE) && radio_state == RadioState::TRANSMITTING);
+    return ((irq_flags & RADIOLIB_SX126X_IRQ_TX_DONE) && radio_state == RadioState::Transmitting);
 }
 
 bool RadioService::start_rx() {
@@ -141,24 +141,24 @@ bool RadioService::read_received_frame(uint8_t* receive_buffer) {
 RadioResultType RadioService::transmit(const uint8_t* serialized_packet) {
     ESP_LOGI(TAG, "TX");
     
-    if (radio_state != RadioState::RECEIVING) {
-        return RadioResultType::RADIO_BUSY;
+    if (radio_state != RadioState::Receiving) {
+        return RadioResultType::RadioBusy;
     }
     
     radio.standby();
     
-    radio_state = RadioState::TRANSMITTING;
+    radio_state = RadioState::Transmitting;
     int state = radio.startTransmit(serialized_packet, protocol::kSerializedPacketSize);
     if (state == RADIOLIB_ERR_NONE) {
         ESP_LOGI(TAG, "Transmission started!");
 
-        return RadioResultType::TRANSMITTING;
+        return RadioResultType::TransmissionStarted;
     } else {
-        radio_state = RadioState::RECEIVING; 
+        radio_state = RadioState::Receiving; 
         radio.startReceive();
         ESP_LOGI(TAG, "Failed to start transmitting, code %d", state);
 
-        return RadioResultType::ERROR;
+        return RadioResultType::Error;
     }
 }
 
@@ -166,24 +166,24 @@ RadioResult RadioService::handle_receive_complete(uint8_t* receive_buffer) {
     const size_t received_length = radio.getPacketLength();
 
     if (read_received_frame(receive_buffer)) {
-        return {RadioResultType::FRAME_RECEIVED, received_length};
+        return {RadioResultType::FrameReceived, received_length};
     } else {
-        return {RadioResultType::ERROR, 0};
+        return {RadioResultType::Error, 0};
     }
 }
 
 RadioResult RadioService::handle_transmit_complete() {
     ESP_LOGI(TAG, "TX complete");
     if (radio.finishTransmit() != RADIOLIB_ERR_NONE) {
-        radio_state = RadioState::ERROR;
-        return {RadioResultType::ERROR, 0};
+        radio_state = RadioState::Error;
+        return {RadioResultType::Error, 0};
     }
     if (!start_rx()) {
-        radio_state = RadioState::ERROR;
-        return {RadioResultType::ERROR, 0};
+        radio_state = RadioState::Error;
+        return {RadioResultType::Error, 0};
     }
-    radio_state = RadioState::RECEIVING;
-    return {RadioResultType::TRANSMIT_COMPLETE, 0};
+    radio_state = RadioState::Receiving;
+    return {RadioResultType::TransmissionComplete, 0};
 }
 
 }

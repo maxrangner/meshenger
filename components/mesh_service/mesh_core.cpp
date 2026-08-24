@@ -7,41 +7,67 @@ namespace mesh {
 
 constexpr char TAG[] = "mesh_core";
 
-void MeshCore::set_device_state(DeviceState loaded_state) {
+void MeshCore::set_device_state(const DeviceState loaded_state) {
     device_state = loaded_state;
     screener.set_device_state(loaded_state.group_id, loaded_state.device_id);
 }
 
-OutgoingResult MeshCore::create_outgoing_packet(const protocol::Payload& payload) {
+DeviceState MeshCore::get_device_state() {
+    return device_state;
+}
+
+OutgoingPacketResult MeshCore::create_outgoing_packet(const protocol::Payload& payload) {
     protocol::Packet packet{};
 
-    packet.version = device_state.protocol_version;
-    packet.message_id.group_id = device_state.group_id;
-    packet.message_id.origin_device_id = device_state.device_id;
-    packet.message_id.message_num = device_state.packet_count++;
+    packet.header.protocol_version = device_state.protocol_version;
+    packet.header.phrase_dictionary_version = device_state.phrase_dictionary_version;
+    packet.header.message_id.group_id = device_state.group_id;
+    packet.header.message_id.origin_device_id = device_state.device_id;
+    packet.header.message_id.sequence_num = device_state.next_sequence_num++;
     packet.payload = payload;
 
     return {packet, device_state};
 }
 
-IncomingResult MeshCore::process_incoming_packet(protocol::Packet incoming_packet) {
-    ScreenerResult result = screener.process_packet(incoming_packet);
+bool MeshCore::prepare_packet_for_relay(protocol::Packet& packet) {
+    if (packet.header.hop_limit != 0) {
+        packet.header.hop_limit--;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+IncomingPacketResult MeshCore::process_incoming_packet(const protocol::Packet incoming_packet) {
+    ScreenerResult result = screener.screen_packet(incoming_packet);
+
     switch (result) {
-        case ScreenerResult::SAME_GROUP_NEW:
-            ESP_LOGI(TAG, "ScreenerResult::SAME_GROUP_NEW");
-            return {IncomingResultMessage::DELIVER_AND_RELAY, incoming_packet};
-        // case ScreenerResult::SAME_GROUP_OLD:
-        //     return {IncomingResultMessage::DISCARD, protocol::Packet{}};
-        case ScreenerResult::OTHER_GROUP_NEW:
-            ESP_LOGI(TAG, "ScreenerResult::OTHER_GROUP_NEW");
-            return {IncomingResultMessage::RELAY, incoming_packet};
-        // case ScreenerResult::OTHER_GROUP_OLD:
-        //     return {IncomingResultMessage::DISCARD, protocol::Packet{}};
-        // case ScreenerResult::DISCARD:
-        //     return {IncomingResultMessage::DISCARD, protocol::Packet{}};
+        case ScreenerResult::NewLocalGroupPacket:
+            ESP_LOGI(TAG, "ScreenerResult::NewLocalGroupPacket");
+            if (incoming_packet.header.hop_limit == 0) {
+                return {IncomingPacketAction::Deliver, incoming_packet};
+            } else {
+                return {IncomingPacketAction::DeliverAndRelay, incoming_packet};
+            }
+            break;
+        // case ScreenerResult::StaleLocalGroupPacket:
+        //     return {IncomingPacketAction::Discard, protocol::Packet{}};
+        case ScreenerResult::NewForeignGroupPacket:
+            ESP_LOGI(TAG, "ScreenerResult::NewForeignGroupPacket");
+            if (incoming_packet.header.hop_limit != 0) {
+                return {IncomingPacketAction::Relay, incoming_packet};
+            } else {
+                ESP_LOGI(TAG, "ScreenerResult::Rejected");
+                return {IncomingPacketAction::Discard, protocol::Packet{}};
+            }
+            break;
+        // case ScreenerResult::StaleForeignGroupPacket:
+        //     return {IncomingPacketAction::Discard, protocol::Packet{}};
+        // case ScreenerResult::Rejected:
+        //     return {IncomingPacketAction::Discard, protocol::Packet{}};
         default:
-            ESP_LOGI(TAG, "ScreenerResult::DISCARD");
-            return {IncomingResultMessage::DISCARD, protocol::Packet{}};
+            ESP_LOGI(TAG, "ScreenerResult::Rejected");
+            return {IncomingPacketAction::Discard, protocol::Packet{}};
     }
 }
 

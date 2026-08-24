@@ -3,46 +3,62 @@
 namespace mesh {
 
 void PacketScreener::set_device_state(const uint64_t group, const uint64_t device) {
-    current_group_id = group;
-    current_device_id = device;
+    local_group_id = group;
+    local_device_id = device;
 }
 
-ScreenerResult PacketScreener::process_packet(const protocol::Packet& packet) {
-    if (packet.message_id.origin_device_id == current_device_id) return ScreenerResult::DISCARD;
-    
-    for (int i = 0; i < seen_unit_count; i++) {
-        if (packet.message_id.group_id == newest_packets_seen[i].group_id && packet.message_id.origin_device_id == newest_packets_seen[i].origin_device_id) {
-            if (packet.message_id.message_num > newest_packets_seen[i].message_num) {
-                newest_packets_seen[i] = packet.message_id;
-                if (packet.message_id.group_id == current_group_id) {
-                    return ScreenerResult::SAME_GROUP_NEW;
+ScreenerResult PacketScreener::screen_packet(const protocol::Packet& packet) {
+    if (is_current_device(packet)) return ScreenerResult::Rejected;
+
+    for (int i = 0; i < tracked_source_counts; i++) {
+        if (is_packet_matching(packet, i)) {
+            if (is_packet_fresh(packet, i)) {
+                latest_message_ids[i] = packet.header.message_id;
+                if (is_packet_for_group(packet)) {
+                    return ScreenerResult::NewLocalGroupPacket;
                 } else {
-                    return ScreenerResult::OTHER_GROUP_NEW;
+                    return ScreenerResult::NewForeignGroupPacket;
                 }
             } else {
-                if (packet.message_id.group_id == current_group_id) {
-                    return ScreenerResult::SAME_GROUP_OLD;
+                if (is_packet_for_group(packet)) {
+                    return ScreenerResult::StaleLocalGroupPacket;
                 } else {
-                    return ScreenerResult::OTHER_GROUP_OLD;
+                    return ScreenerResult::StaleForeignGroupPacket;
                 }
             }
         }
     }
 
-    if (seen_unit_count < kPacketScreenerBufferSize) {
-        newest_packets_seen[seen_unit_count++] = packet.message_id;
-        if (packet.message_id.group_id == current_group_id) {
-            return ScreenerResult::SAME_GROUP_NEW;
+    if (is_buffer_full()) {
+        latest_message_ids[tracked_source_counts++] = packet.header.message_id;
+        if (is_packet_for_group(packet)) {
+            return ScreenerResult::NewLocalGroupPacket;
         } else {
-            return ScreenerResult::OTHER_GROUP_NEW;
+            return ScreenerResult::NewForeignGroupPacket;
         }
     } else {
-        return ScreenerResult::DISCARD;
+        return ScreenerResult::Rejected;
     }
 }
 
-bool is_packet_for_group(uint64_t group_id, const protocol::Packet& packet) {
-    return (group_id == packet.message_id.group_id);
+bool PacketScreener::is_current_device(const protocol::Packet& packet) const {
+    return (packet.header.message_id.origin_device_id == local_device_id);
+}
+
+bool PacketScreener::is_packet_for_group(const protocol::Packet& packet) const {
+    return (packet.header.message_id.group_id == local_group_id);
+}
+
+bool PacketScreener::is_packet_matching(const protocol::Packet& packet, uint8_t i) const {
+    return (packet.header.message_id.group_id == latest_message_ids[i].group_id && packet.header.message_id.origin_device_id == latest_message_ids[i].origin_device_id);
+}
+
+bool PacketScreener::is_packet_fresh(const protocol::Packet& packet, uint8_t i) const {
+    return (packet.header.message_id.sequence_num > latest_message_ids[i].sequence_num);
+}
+
+bool PacketScreener::is_buffer_full() {
+    return (tracked_source_counts < kMaxTrackedSources);
 }
 
 }

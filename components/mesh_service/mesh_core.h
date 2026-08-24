@@ -6,30 +6,32 @@
 
 namespace mesh {
 
-enum class IncomingResultMessage {
-    DELIVER_AND_RELAY,
-    DELIVER,
-    RELAY,
-    DISCARD
+enum class IncomingPacketAction {
+    DeliverAndRelay,
+    Deliver,
+    Relay,
+    Discard
 };
 
-struct IncomingResult{
-    IncomingResultMessage message;
+struct IncomingPacketResult{
+    IncomingPacketAction action;
     protocol::Packet packet;
 };
 
-struct OutgoingResult {
+struct OutgoingPacketResult {
     protocol::Packet packet;
-    DeviceState state;
+    DeviceState updated_state;
 };
     
 class MeshCore {
     DeviceState device_state;
     PacketScreener screener;
 public:
-    void set_device_state(DeviceState loaded_state);
-    OutgoingResult create_outgoing_packet(const protocol::Payload& payload);
-    IncomingResult process_incoming_packet(protocol::Packet incoming_packet);
+    void set_device_state(const DeviceState loaded_state);
+    DeviceState get_device_state();
+    OutgoingPacketResult create_outgoing_packet(const protocol::Payload& payload);
+    bool prepare_packet_for_relay(protocol::Packet& packet);
+    IncomingPacketResult process_incoming_packet(const protocol::Packet incoming_packet);
 };
 
 }

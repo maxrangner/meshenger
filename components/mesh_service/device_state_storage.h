@@ -4,7 +4,7 @@
 
 namespace mesh {
 
-bool loadDeviceSettings(DeviceState* state);
-bool saveDeviceSettings(const DeviceState& state);
+bool load_device_settings(DeviceState* state);
+bool save_device_settings(const DeviceState& state);
 
 }

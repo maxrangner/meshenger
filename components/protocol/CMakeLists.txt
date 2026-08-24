@@ -1,4 +1,4 @@
 idf_component_register(
-    SRCS "utils.cpp"
+    SRCS "packet_codec.cpp"
     INCLUDE_DIRS "."
 )

@@ -3,13 +3,13 @@
 #include "nvs_flash.h"
 #include "esp_mac.h"
 #include "esp_log.h"
-#include "utils.h"
-#include "app_message.h"
+#include "packet_codec.h"
+#include "app_event.h"
 #include "packet_screener.h"
-#include "preset_messages.h"
+#include "preset_phrase_dictionary.h"
 
 
-const char* TAG = "app_controller";
+constexpr char TAG[] = "app_controller";
 
 namespace app {
 
@@ -22,13 +22,13 @@ static void handle_button_callback(button_event_t event, gpio_num_t gpio_num, vo
         case button_event_t::BTN_SHORT_PRESS:
             ESP_LOGI(TAG, "Button callback - Short press!");
 
-            button_event.message = AppEventMessage::BUTTON_SHORT_PRESS;
+            button_event.type = AppEventType::ShortButtonPress;
             xQueueSend(context->queue, &button_event, 0);
             break;
         case button_event_t::BTN_LONG_PRESS:
             ESP_LOGI(TAG, "Button callback - Long press!");
 
-            button_event.message = AppEventMessage::BUTTON_LONG_PRESS;
+            button_event.type = AppEventType::LongButtonPress;
             xQueueSend(context->queue, &button_event, 0);
             break;
     }
@@ -69,15 +69,15 @@ void AppController::app_task(void* pvParameters) {
 
     while(true) {
         xQueueReceive(self->app_queue_handle, &event, portMAX_DELAY);
-        switch (event.message) {
-            case AppEventMessage::BUTTON_SHORT_PRESS:
-                self->send_update();
+        switch (event.type) {
+            case AppEventType::ShortButtonPress:
+                self->send_status_update();
                 break;
-            case AppEventMessage::BUTTON_LONG_PRESS:
+            case AppEventType::LongButtonPress:
                 ESP_LOGI(TAG, "No function set for long press.");
                 break;
-            case AppEventMessage::MESSAGE_RECEIVED:
-                self->handle_received_update(event.origin_device_id, event.payload);
+            case AppEventType::StatusUpdateReceived:
+                self->handle_received_status_update(event.origin_device_id, event.payload);
                 break;
             default:
                 break;
@@ -85,7 +85,7 @@ void AppController::app_task(void* pvParameters) {
     }
 }
 
-void AppController::send_update() {
+void AppController::send_status_update() {
     // TODO: Construct status update through UI
 
     protocol::Payload payload{};
@@ -93,14 +93,14 @@ void AppController::send_update() {
     payload.bytes[1] = message_part_0; // Phrase one
     payload.bytes[2] = message_part_1; // Phrase two
 
-    ESP_LOGI(TAG, "Send payload message: %s, %s", message_parts[message_part_0], message_parts[message_part_1]);
+    ESP_LOGI(TAG, "Send payload action: %s, %s", kPhraseDictionaryV1[message_part_0], kPhraseDictionaryV1[message_part_1]);
 
     mesh.send_payload(payload);
 }
 
-void AppController::handle_received_update(uint64_t origin_device_id, protocol::Payload payload) {
+void AppController::handle_received_status_update(const uint64_t origin_device_id, const protocol::Payload payload) {
     ESP_LOGI(TAG, "New status update received!");
-    ESP_LOGI(TAG, "Message: %s, %s", message_parts[payload.bytes[1]], message_parts[payload.bytes[2]]);
+    ESP_LOGI(TAG, "Message: %s, %s", kPhraseDictionaryV1[payload.bytes[1]], kPhraseDictionaryV1[payload.bytes[2]]);
 }
 
 void AppController::init_nvs() {
