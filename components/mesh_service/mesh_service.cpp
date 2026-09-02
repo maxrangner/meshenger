@@ -4,11 +4,11 @@
 #include "esp_log.h"
 #include "esp_err.h"
 #include "app_event.h"
-#include "device_state_storage.h"
+#include "node_state_storage.h"
 #include "esp_mac.h"
 #include "packet_codec.h"
 
-constexpr char TAG[] = "MeshService";
+constexpr char TAG[] = "mesh_service";
 
 namespace mesh {
 
@@ -23,24 +23,24 @@ void MeshService::init(QueueHandle_t app_queue) {
     mesh_queue_handle = xQueueCreate(10, sizeof(MeshEvent));
     app_queue_handle = app_queue;
     
-    DeviceState device_state{};
-    if (!load_device_settings(&device_state)) {
+    LocalNodeState node_state{};
+    if (!load_node_state(&node_state)) {
         ESP_LOGI(TAG, "No stored settings loaded, using defaults");
-        device_state.protocol_version = 1;
-        device_state.phrase_dictionary_version = 1;
-        device_state.device_id = get_mac_address();
-        device_state.group_id = 0;
-        device_state.next_sequence_num = 0;
+        node_state.protocol_version = 1;
+        node_state.phrase_dictionary_version = 1;
+        node_state.device_id = get_mac_address();
+        node_state.group_id = 0;
+        node_state.next_sequence_num = 0;
     }
     #ifdef CONFIG_MESHENGER_OVERRIDE_DEVICE_CONFIG
-        device_state.group_id = static_cast<uint64_t>(CONFIG_MESHENGER_GROUP_ID);
+        node_state.group_id = static_cast<uint64_t>(CONFIG_MESHENGER_GROUP_ID);
     #endif
 
-    core.set_device_state(device_state);
+    core.set_local_identity(node_state);
 
-    int state = radio.init(&radio_irq_callback);
-    if (state != RADIOLIB_ERR_NONE) {
-        ESP_LOGI(TAG, "Radio failed to initialize, code %d", state);
+    int status = radio.init(&radio_irq_callback);
+    if (status != RADIOLIB_ERR_NONE) {
+        ESP_LOGI(TAG, "Radio failed to initialize, code %d", status);
         return;
     }
 
@@ -60,16 +60,17 @@ void MeshService::mesh_service_task(void* pvParameters) {
 
     ESP_LOGI(TAG, "Running radio task on core %d", kTaskCore);
 
-    MeshEvent incoming_command;
+    MeshEvent event;
+    TickType_t relay_wait = portMAX_DELAY;
     self->radio.start_rx();
 
     while(true) {
-        xQueueReceive(self->mesh_queue_handle, &incoming_command, portMAX_DELAY);
+        xQueueReceive(self->mesh_queue_handle, &event, relay_wait);
 
-        switch (incoming_command.type) {
+        switch (event.type) {
             case MeshEventType::SendRequested: {
-                radio::RadioResultType result = self->handle_send_payload(incoming_command.payload);
-                if (result != radio::RadioResultType::TransmissionStarted) {
+                radio::RadioResultType transmit_result = self->handle_send_request(event.payload);
+                if (transmit_result != radio::RadioResultType::TransmissionStarted) {
                     ESP_LOGI(TAG, "Error sending payload.");
                 }
                 break;
@@ -80,8 +81,8 @@ void MeshService::mesh_service_task(void* pvParameters) {
                 if (irq_result.type == radio::RadioResultType::FrameReceived) {
                     self->handle_received_frame(self->receive_buffer, irq_result.received_size);
                 } else if (irq_result.type == radio::RadioResultType::TransmissionComplete) {
-                    DeviceState state = self->core.get_device_state();
-                    save_device_settings(state);
+                    LocalNodeState local_state = self->core.get_node_state();
+                    save_node_state(local_state);
                 } else if (irq_result.type == radio::RadioResultType::Error) {
                     // Handle error
                 }
@@ -101,10 +102,10 @@ void MeshService::send_payload(const protocol::Payload& payload) {
     xQueueSend(mesh_queue_handle, &event, 0);
 }
 
-radio::RadioResultType MeshService::handle_send_payload(const protocol::Payload& payload) {
+radio::RadioResultType MeshService::handle_send_request(const protocol::Payload& payload) {
     OutgoingPacketResult outgoing = core.create_outgoing_packet(payload);
 
-    if (!save_device_settings(outgoing.updated_state)) {
+    if (!save_node_state(outgoing.updated_state)) {
         return radio::RadioResultType::Error;
     }
     
@@ -125,11 +126,11 @@ void MeshService::handle_received_frame(uint8_t* serialized_packet, const size_t
 
     switch (incoming.action) {
         case IncomingPacketAction::DeliverAndRelay:
-            deliver_message_to_app(incoming.packet);
+            deliver_packet_to_app(incoming.packet);
             relay_packet(incoming.packet);
             break;
         case IncomingPacketAction::Deliver:
-            deliver_message_to_app(incoming.packet);
+            deliver_packet_to_app(incoming.packet);
             break;
         case IncomingPacketAction::Relay:
             relay_packet(packet);
@@ -150,7 +151,7 @@ radio::RadioResultType MeshService::relay_packet(protocol::Packet& packet) {
     return radio.transmit(transmit_buffer);
 }
 
-void MeshService::deliver_message_to_app(const protocol::Packet& packet) {
+void MeshService::deliver_packet_to_app(const protocol::Packet& packet) {
     app::AppEvent event;
     event.type = app::AppEventType::StatusUpdateReceived;
     event.origin_device_id = packet.header.message_id.origin_device_id;

@@ -1,4 +1,4 @@
-#include "app_controller.h"
+#include "application.h"
 
 #include "nvs_flash.h"
 #include "esp_mac.h"
@@ -6,7 +6,7 @@
 #include "packet_codec.h"
 #include "app_event.h"
 #include "packet_screener.h"
-#include "preset_phrase_dictionary.h"
+#include "phrase_dictionary.h"
 
 
 constexpr char TAG[] = "app_controller";
@@ -23,18 +23,18 @@ static void handle_button_callback(button_event_t event, gpio_num_t gpio_num, vo
             ESP_LOGI(TAG, "Button callback - Short press!");
 
             button_event.type = AppEventType::ShortButtonPress;
-            xQueueSend(context->queue, &button_event, 0);
+            xQueueSend(context->app_event_queue, &button_event, 0);
             break;
         case button_event_t::BTN_LONG_PRESS:
             ESP_LOGI(TAG, "Button callback - Long press!");
 
             button_event.type = AppEventType::LongButtonPress;
-            xQueueSend(context->queue, &button_event, 0);
+            xQueueSend(context->app_event_queue, &button_event, 0);
             break;
     }
 }
 
-void AppController::init() {
+void Application::init() {
     ESP_LOGI(TAG, "AppController init");
 
     init_nvs();
@@ -52,7 +52,7 @@ void AppController::init() {
 
     mesh.init(app_queue_handle);
 
-    btn_ctx.queue = app_queue_handle;
+    btn_ctx.app_event_queue = app_queue_handle;
     button_cfg_t btn_cfg = BUTTON_CFG_DEFAULT(button_pin, handle_button_callback);
     btn_cfg.user_data = &btn_ctx;
     btn_cfg.hasPullup = true;
@@ -60,8 +60,8 @@ void AppController::init() {
     ESP_ERROR_CHECK(button_init(&btn_cfg, &main_btn));
 }
 
-void AppController::app_task(void* pvParameters) {
-    auto* self = static_cast<AppController*>(pvParameters);
+void Application::app_task(void* pvParameters) {
+    auto* self = static_cast<Application*>(pvParameters);
 
     ESP_LOGI(TAG, "Running app task on core %d", kTaskCore);
 
@@ -85,7 +85,7 @@ void AppController::app_task(void* pvParameters) {
     }
 }
 
-void AppController::send_status_update() {
+void Application::send_status_update() {
     // TODO: Construct status update through UI
 
     protocol::Payload payload{};
@@ -98,18 +98,18 @@ void AppController::send_status_update() {
     mesh.send_payload(payload);
 }
 
-void AppController::handle_received_status_update(const uint64_t origin_device_id, const protocol::Payload payload) {
+void Application::handle_received_status_update(const uint64_t origin_device_id, const protocol::Payload payload) {
     ESP_LOGI(TAG, "New status update received!");
     ESP_LOGI(TAG, "Message: %s, %s", kPhraseDictionaryV1[payload.bytes[1]], kPhraseDictionaryV1[payload.bytes[2]]);
 }
 
-void AppController::init_nvs() {
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+void Application::init_nvs() {
+    esp_err_t status = nvs_flash_init();
+    if (status == ESP_ERR_NVS_NO_FREE_PAGES || status == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
+        status = nvs_flash_init();
     }
-    ESP_ERROR_CHECK(ret);
+    ESP_ERROR_CHECK(status);
 }
 
 }

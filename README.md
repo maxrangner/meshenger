@@ -36,7 +36,6 @@ Current design:
 Known limitations:
 - If a part of the group network is disconnected, it will not self heal. Each device has to update the status again to become visible to the previously disconnected part of the network. This might be fixed with a healing group sync at set intervals.
 - Packet collision when two nodes relay a packet at the same time. Can be mitigated by introducing a randomized delay for retransmissions.
-- At reboot the local network snapshot is lost, which can trigger redundant relays.
 - There is currently no delivery guarantee.
 - No encryption yet.
 - A factory reset device can be read as stale until it catches up the old `messageNum`. Re-adding the device to clear the counter might be an early solution.

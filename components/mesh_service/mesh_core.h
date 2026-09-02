@@ -1,6 +1,6 @@
 #pragma once
 
-#include "device_state.h"
+#include "node_state.h"
 #include "packet_screener.h"
 #include "packet.h"
 
@@ -20,18 +20,19 @@ struct IncomingPacketResult{
 
 struct OutgoingPacketResult {
     protocol::Packet packet;
-    DeviceState updated_state;
+    LocalNodeState updated_state;
 };
     
 class MeshCore {
-    DeviceState device_state;
-    PacketScreener screener;
 public:
-    void set_device_state(const DeviceState loaded_state);
-    DeviceState get_device_state();
+    void set_local_identity(const LocalNodeState loaded_state);
+    LocalNodeState get_node_state();
     OutgoingPacketResult create_outgoing_packet(const protocol::Payload& payload);
     bool prepare_packet_for_relay(protocol::Packet& packet);
     IncomingPacketResult process_incoming_packet(const protocol::Packet incoming_packet);
+private:
+    LocalNodeState node_state;
+    PacketScreener screener;
 };
 
 }

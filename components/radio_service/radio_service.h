@@ -33,6 +33,12 @@ struct RadioResult {
 };
 
 class RadioService {
+public:
+    RadioService();
+    int init(void (*irq_callback)());
+    bool start_rx();
+    RadioResult handle_irq(uint8_t* receive_buffer);
+    RadioResultType transmit(const uint8_t* serialized_packet);
 private:
     gpio_num_t spi_cs_pin = static_cast<gpio_num_t>(8);
     gpio_num_t spi_sck_pin = static_cast<gpio_num_t>(9);
@@ -61,12 +67,6 @@ private:
     RadioResult handle_transmit_complete();
     bool is_rx_done(const uint32_t &irq_flags);
     bool is_tx_done(const uint32_t &irq_flags);
-public:
-    RadioService();
-    int init(void (*irq_callback)());
-    bool start_rx();
-    RadioResult handle_irq(uint8_t* receive_buffer);
-    RadioResultType transmit(const uint8_t* serialized_packet);
 };
 
 }

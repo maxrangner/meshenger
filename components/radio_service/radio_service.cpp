@@ -5,7 +5,7 @@
 #include "esp_log.h"
 #include "app_event.h"
 
-constexpr char TAG[] = "RadioService";
+constexpr char TAG[] = "radio_service";
 
 namespace radio {
 
@@ -20,7 +20,7 @@ int RadioService::init_radio() {
     ESP_ERROR_CHECK(gpio_set_direction(pa_csd_pin, GPIO_MODE_OUTPUT));
     ESP_ERROR_CHECK(gpio_set_direction(pa_ctx_pin, GPIO_MODE_OUTPUT));
 
-    ESP_ERROR_CHECK(gpio_set_level(pa_ctx_pin, 0)); // Safe non-TX state before RadioLib takes control
+    ESP_ERROR_CHECK(gpio_set_level(pa_ctx_pin, 0)); // Safe non-TX result_code before RadioLib takes control
     ESP_ERROR_CHECK(gpio_set_level(vfem_ctrl_pin, 1)); // Power/activation of front-end
     ESP_ERROR_CHECK(gpio_set_level(pa_csd_pin, 1)); // Activates KCT8103L
 
@@ -56,21 +56,21 @@ int RadioService::init_radio() {
         .preambleLength = 8
     };
     
-    int state = radio.begin(radio_config_t);
-    if (state != RADIOLIB_ERR_NONE) {
-        ESP_LOGE(TAG, "[SX1262] Initialization failed, code %d", state);
-        return state;
+    int status = radio.begin(radio_config_t);
+    if (status != RADIOLIB_ERR_NONE) {
+        ESP_LOGE(TAG, "[SX1262] Initialization failed, code %d", status);
+        return status;
     }
 
-    return state;
+    return status;
 }
 
 int RadioService::init(void (*irq_callback)()) {
     ESP_LOGI(TAG, "Initializing RadioService...");
 
-    int state = init_radio();
-    if (state != RADIOLIB_ERR_NONE) {
-        return state;
+    int status = init_radio();
+    if (status != RADIOLIB_ERR_NONE) {
+        return status;
     }
 
     ESP_LOGI(TAG, "RadioService and [SX1262] Initialized successfully");
@@ -124,16 +124,16 @@ bool RadioService::read_received_frame(uint8_t* receive_buffer) {
     ESP_LOGI(TAG, "Reading new packet.");
 
     memset(receive_buffer, 0, protocol::kSerializedPacketSize);
-    int state = radio.readData(receive_buffer, protocol::kSerializedPacketSize);
+    int status = radio.readData(receive_buffer, protocol::kSerializedPacketSize);
 
     // Handle error
-    if (state == RADIOLIB_ERR_NONE) {
+    if (status == RADIOLIB_ERR_NONE) {
         ESP_LOGI(TAG, "Packet received! Sending to AppController for processing...");
         return true;
-    } else if (state == RADIOLIB_ERR_RX_TIMEOUT) {
+    } else if (status == RADIOLIB_ERR_RX_TIMEOUT) {
         ESP_LOGE(TAG, "Receive timeout");
     } else {
-        ESP_LOGE(TAG, "Failed to start receiving, code %d", state);
+        ESP_LOGE(TAG, "Failed to start receiving, code %d", status);
     }
     return false;
 }
@@ -148,25 +148,25 @@ RadioResultType RadioService::transmit(const uint8_t* serialized_packet) {
     radio.standby();
     
     radio_state = RadioState::Transmitting;
-    int state = radio.startTransmit(serialized_packet, protocol::kSerializedPacketSize);
-    if (state == RADIOLIB_ERR_NONE) {
+    int status = radio.startTransmit(serialized_packet, protocol::kSerializedPacketSize);
+    if (status == RADIOLIB_ERR_NONE) {
         ESP_LOGI(TAG, "Transmission started!");
 
         return RadioResultType::TransmissionStarted;
     } else {
         radio_state = RadioState::Receiving; 
         radio.startReceive();
-        ESP_LOGI(TAG, "Failed to start transmitting, code %d", state);
+        ESP_LOGI(TAG, "Failed to start transmitting, code %d", status);
 
         return RadioResultType::Error;
     }
 }
 
 RadioResult RadioService::handle_receive_complete(uint8_t* receive_buffer) {
-    const size_t received_length = radio.getPacketLength();
+    const size_t received_size = radio.getPacketLength();
 
     if (read_received_frame(receive_buffer)) {
-        return {RadioResultType::FrameReceived, received_length};
+        return {RadioResultType::FrameReceived, received_size};
     } else {
         return {RadioResultType::Error, 0};
     }

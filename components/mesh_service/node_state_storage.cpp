@@ -1,4 +1,4 @@
-#include "device_state_storage.h"
+#include "node_state_storage.h"
 
 #include "esp_log.h"
 #include "nvs.h"
@@ -7,12 +7,12 @@ constexpr char TAG[] = "settings storage";
 
 namespace mesh {
 
-bool load_device_settings(DeviceState* state) {
+bool load_node_state(LocalNodeState* state) {
     if (state == nullptr) {
         return false;
     }
 
-    DeviceState loaded_config{};
+    LocalNodeState loaded_config{};
 
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open("device", NVS_READONLY, &nvs_handle);
@@ -61,8 +61,8 @@ bool load_device_settings(DeviceState* state) {
     return true;
 }
 
-bool save_device_settings(const DeviceState& state) {
-    // DeviceState config_to_save = state;
+bool save_node_state(const LocalNodeState& state) {
+    // LocalNodeState config_to_save = state;
     // config_to_save.protocol_version = 1;
 
     nvs_handle_t nvs_handle;
