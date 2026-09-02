@@ -31,6 +31,7 @@ private:
     radio::RadioResultType relay_packet(protocol::Packet& packet);
     void deliver_packet_to_app(const protocol::Packet& packet);
     uint64_t get_mac_address();
+    void random_blocking_delay();
 
     TaskHandle_t mesh_task_handle = nullptr;
     inline static QueueHandle_t mesh_queue_handle = nullptr;

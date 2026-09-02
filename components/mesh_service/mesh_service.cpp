@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "esp_err.h"
 #include "app_event.h"
+#include "esp_random.h"
 #include "node_state_storage.h"
 #include "esp_mac.h"
 #include "packet_codec.h"
@@ -124,19 +125,12 @@ void MeshService::handle_received_frame(uint8_t* serialized_packet, const size_t
 
     IncomingPacketResult incoming = core.process_incoming_packet(packet);
 
-    switch (incoming.action) {
-        case IncomingPacketAction::DeliverAndRelay:
-            deliver_packet_to_app(incoming.packet);
-            relay_packet(incoming.packet);
-            break;
-        case IncomingPacketAction::Deliver:
-            deliver_packet_to_app(incoming.packet);
-            break;
-        case IncomingPacketAction::Relay:
-            relay_packet(packet);
-            break;
-        case IncomingPacketAction::Discard:
-            break;
+    if (incoming.should_deliver) {
+        deliver_packet_to_app(incoming.packet);
+    }
+    if (incoming.should_relay) {
+        random_blocking_delay();
+        relay_packet(incoming.packet);
     }
 }
 
@@ -170,6 +164,12 @@ uint64_t MeshService::get_mac_address() {
     }
 
     return converted_mac;
+}
+
+void MeshService::random_blocking_delay() {
+    const uint8_t min_delay_ms = 50;
+    uint8_t relay_delay_ms = min_delay_ms + (esp_random() % 101);
+    vTaskDelay(pdMS_TO_TICKS(relay_delay_ms)); 
 }
 
 }

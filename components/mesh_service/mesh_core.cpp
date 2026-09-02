@@ -39,36 +39,43 @@ bool MeshCore::prepare_packet_for_relay(protocol::Packet& packet) {
 }
 
 IncomingPacketResult MeshCore::process_incoming_packet(const protocol::Packet incoming_packet) {
+    /*
+    Can it be delivered? Incompatible protocol version not OK
+    Can it be relayed? Incompatible protocol version OK
+    */
+
+
+    // Check supported protocol and dict versions, and that fields are legal
+    IncomingPacketResult return_status{};
+    return_status.packet = incoming_packet;
     ScreenerClassification result = screener.screen_packet(incoming_packet);
 
     switch (result) {
         case ScreenerClassification::NewLocalGroupPacket:
             ESP_LOGI(TAG, "ScreenerClassification::NewLocalGroupPacket");
-            if (incoming_packet.header.hop_limit == 0) {
-                return {IncomingPacketAction::Deliver, incoming_packet};
-            } else {
-                return {IncomingPacketAction::DeliverAndRelay, incoming_packet};
+            return_status.should_deliver = true; // put inside: if (packet_is_compatible) return Deliver else Error
+            if (incoming_packet.header.hop_limit > 0) {
+                return_status.should_relay = true;
             }
             break;
-        // case ScreenerClassification::StaleLocalGroupPacket:
-        //     return {IncomingPacketAction::Discard, protocol::Packet{}};
         case ScreenerClassification::NewForeignGroupPacket:
             ESP_LOGI(TAG, "ScreenerClassification::NewForeignGroupPacket");
             if (incoming_packet.header.hop_limit != 0) {
-                return {IncomingPacketAction::Relay, incoming_packet};
-            } else {
-                ESP_LOGI(TAG, "ScreenerClassification::Rejected");
-                return {IncomingPacketAction::Discard, protocol::Packet{}};
+                return_status.should_relay = true;
             }
             break;
-        // case ScreenerClassification::StaleForeignGroupPacket:
-        //     return {IncomingPacketAction::Discard, protocol::Packet{}};
-        // case ScreenerClassification::Rejected:
-        //     return {IncomingPacketAction::Discard, protocol::Packet{}};
+        case ScreenerClassification::StaleLocalGroupPacket:
+            ESP_LOGI(TAG, "ScreenerClassification::StaleLocalGroupPacket");
+            break;
+        case ScreenerClassification::StaleForeignGroupPacket:
+            ESP_LOGI(TAG, "ScreenerClassification::StaleForeignGroupPacket");
+            break;
         default:
             ESP_LOGI(TAG, "ScreenerClassification::Rejected");
-            return {IncomingPacketAction::Discard, protocol::Packet{}};
+            break;
     }
+
+    return return_status;
 }
 
 }

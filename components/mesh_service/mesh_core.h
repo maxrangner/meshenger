@@ -6,15 +6,9 @@
 
 namespace mesh {
 
-enum class IncomingPacketAction {
-    DeliverAndRelay,
-    Deliver,
-    Relay,
-    Discard
-};
-
 struct IncomingPacketResult{
-    IncomingPacketAction action;
+    bool should_deliver = false;
+    bool should_relay = false;
     protocol::Packet packet;
 };
 
