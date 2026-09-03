@@ -1,4 +1,4 @@
 idf_component_register(
-    SRCS "application.cpp" "main.cpp"
+    SRCS "app_log.cpp" "application.cpp" "main.cpp"
     INCLUDE_DIRS "."
 )

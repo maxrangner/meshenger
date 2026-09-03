@@ -8,7 +8,7 @@ void PacketScreener::set_local_identity(const uint64_t group, const uint64_t dev
 }
 
 ScreenerClassification PacketScreener::screen_packet(const protocol::Packet& packet) {
-    if (is_from_local_device(packet)) return ScreenerClassification::Rejected;
+    if (is_from_local_device(packet)) return ScreenerClassification::RejectedOwnPacket;
 
     for (int source_index = 0; source_index < tracked_source_count; source_index++) {
         if (is_packet_matching(packet, source_index)) {
@@ -37,7 +37,7 @@ ScreenerClassification PacketScreener::screen_packet(const protocol::Packet& pac
             return ScreenerClassification::NewForeignGroupPacket;
         }
     } else {
-        return ScreenerClassification::Rejected;
+        return ScreenerClassification::RejectedNoCapacity;
     }
 }
 

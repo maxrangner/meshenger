@@ -1,11 +1,9 @@
 #include "application.h"
-#include "esp_log.h"
-
-static const char *TAG = "main";
+#include "app_log.h"
 
 extern "C" void app_main(void)
 {
-    ESP_LOGI(TAG, "Booting up...");
+    app::log_boot_banner();
 
     static app::Application app;
 

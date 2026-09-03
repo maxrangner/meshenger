@@ -1,11 +1,8 @@
 #include "mesh_core.h"
 
 #include <cstring>
-#include "esp_log.h"
 
 namespace mesh {
-
-constexpr char TAG[] = "mesh_core";
 
 void MeshCore::set_local_identity(const LocalNodeState loaded_state) {
     node_state = loaded_state;
@@ -44,15 +41,13 @@ IncomingPacketResult MeshCore::process_incoming_packet(const protocol::Packet in
     Can it be relayed? Incompatible protocol version OK
     */
 
-
     // Check supported protocol and dict versions, and that fields are legal
     IncomingPacketResult return_status{};
     return_status.packet = incoming_packet;
-    ScreenerClassification result = screener.screen_packet(incoming_packet);
+    return_status.classification = screener.screen_packet(incoming_packet);
 
-    switch (result) {
+    switch (return_status.classification) {
         case ScreenerClassification::NewLocalGroupPacket:
-            ESP_LOGI(TAG, "ScreenerClassification::NewLocalGroupPacket");
             if (packet_is_compatible(incoming_packet)) {
                 return_status.should_deliver = true;
             }
@@ -61,19 +56,11 @@ IncomingPacketResult MeshCore::process_incoming_packet(const protocol::Packet in
             }
             break;
         case ScreenerClassification::NewForeignGroupPacket:
-            ESP_LOGI(TAG, "ScreenerClassification::NewForeignGroupPacket");
             if (incoming_packet.header.hop_limit != 0) {
                 return_status.should_relay = true;
             }
             break;
-        case ScreenerClassification::StaleLocalGroupPacket:
-            ESP_LOGI(TAG, "ScreenerClassification::StaleLocalGroupPacket");
-            break;
-        case ScreenerClassification::StaleForeignGroupPacket:
-            ESP_LOGI(TAG, "ScreenerClassification::StaleForeignGroupPacket");
-            break;
         default:
-            ESP_LOGI(TAG, "ScreenerClassification::Rejected");
             break;
     }
 
@@ -83,7 +70,7 @@ IncomingPacketResult MeshCore::process_incoming_packet(const protocol::Packet in
 bool MeshCore::packet_is_compatible(const protocol::Packet& packet) {
     return (
         packet.header.protocol_version >= 1 &&
-        packet.header.protocol_version <= protocol::kCurrentProtocolVersion && 
+        packet.header.protocol_version <= protocol::kCurrentProtocolVersion &&
         packet.header.phrase_dictionary_version >= 1 &&
         packet.header.phrase_dictionary_version <= protocol::kCurrentPhraseDictionaryVersion
     );

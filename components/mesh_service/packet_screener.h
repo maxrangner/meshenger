@@ -11,7 +11,8 @@ enum class ScreenerClassification {
     StaleLocalGroupPacket,
     NewForeignGroupPacket,
     StaleForeignGroupPacket,
-    Rejected
+    RejectedOwnPacket,
+    RejectedNoCapacity
 };
 
 class PacketScreener {

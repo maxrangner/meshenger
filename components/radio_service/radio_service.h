@@ -30,6 +30,8 @@ enum class RadioResultType {
 struct RadioResult {
     RadioResultType type;
     size_t received_size;
+    float rssi_dbm;
+    float snr_db;
 };
 
 class RadioService {
@@ -55,6 +57,8 @@ private:
 
     int8_t radio_power = kRadioPower;
     uint8_t spreading_factor = kSpreadingFactor;
+
+    int64_t transmit_start_us = 0;
 
     EspHal hal;
     Module module;

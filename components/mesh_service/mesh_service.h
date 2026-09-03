@@ -27,11 +27,11 @@ private:
     static void IRAM_ATTR radio_irq_callback();
     static void mesh_service_task(void* pvParameters);
     radio::RadioResultType handle_send_request(const protocol::Payload& payload);
-    void handle_received_frame(uint8_t* serialized_packet, const size_t received_size);
-    radio::RadioResultType relay_packet(protocol::Packet& packet);
+    void handle_received_frame(uint8_t* serialized_packet, const radio::RadioResult& frame);
+    radio::RadioResultType relay_packet(protocol::Packet& packet, const uint32_t backoff_ms);
     void deliver_packet_to_app(const protocol::Packet& packet);
     uint64_t get_mac_address();
-    void random_blocking_delay();
+    uint32_t random_blocking_delay();
 
     TaskHandle_t mesh_task_handle = nullptr;
     inline static QueueHandle_t mesh_queue_handle = nullptr;

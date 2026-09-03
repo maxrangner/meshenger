@@ -7,9 +7,9 @@
 #include "app_event.h"
 #include "packet_screener.h"
 #include "phrase_dictionary.h"
+#include "app_log.h"
 
-
-constexpr char TAG[] = "app_controller";
+constexpr char TAG[] = "app";
 
 namespace app {
 
@@ -20,13 +20,13 @@ static void handle_button_callback(button_event_t event, gpio_num_t gpio_num, vo
 
     switch (event) {
         case button_event_t::BTN_SHORT_PRESS:
-            ESP_LOGI(TAG, "Button callback - Short press!");
+            ESP_LOGD(TAG, "button: short press");
 
             button_event.type = AppEventType::ShortButtonPress;
             xQueueSend(context->app_event_queue, &button_event, 0);
             break;
         case button_event_t::BTN_LONG_PRESS:
-            ESP_LOGI(TAG, "Button callback - Long press!");
+            ESP_LOGD(TAG, "button: long press");
 
             button_event.type = AppEventType::LongButtonPress;
             xQueueSend(context->app_event_queue, &button_event, 0);
@@ -35,8 +35,6 @@ static void handle_button_callback(button_event_t event, gpio_num_t gpio_num, vo
 }
 
 void Application::init() {
-    ESP_LOGI(TAG, "AppController init");
-
     init_nvs();
 
     app_queue_handle = xQueueCreate(10, sizeof(AppEvent));
@@ -58,12 +56,14 @@ void Application::init() {
     btn_cfg.hasPullup = true;
     ESP_ERROR_CHECK(button_service_init());
     ESP_ERROR_CHECK(button_init(&btn_cfg, &main_btn));
+
+    ESP_LOGI(TAG, "ready · short press sends a status update");
 }
 
 void Application::app_task(void* pvParameters) {
     auto* self = static_cast<Application*>(pvParameters);
 
-    ESP_LOGI(TAG, "Running app task on core %d", kTaskCore);
+    ESP_LOGD(TAG, "app task running on core %d", kTaskCore);
 
     AppEvent event;
 
@@ -74,7 +74,7 @@ void Application::app_task(void* pvParameters) {
                 self->send_status_update();
                 break;
             case AppEventType::LongButtonPress:
-                ESP_LOGI(TAG, "No function set for long press.");
+                ESP_LOGD(TAG, "long press has no action yet");
                 break;
             case AppEventType::StatusUpdateReceived:
                 self->handle_received_status_update(event.origin_device_id, event.payload);
@@ -93,22 +93,24 @@ void Application::send_status_update() {
     payload.bytes[1] = message_part_0; // Phrase one
     payload.bytes[2] = message_part_1; // Phrase two
 
-    ESP_LOGI(TAG, "Send payload action: %s, %s", kPhraseDictionaryV1[message_part_0], kPhraseDictionaryV1[message_part_1]);
+    log_status_update_sending(message_part_0, message_part_1);
 
     mesh.send_payload(payload);
 }
 
 void Application::handle_received_status_update(const uint64_t origin_device_id, const protocol::Payload payload) {
-    ESP_LOGI(TAG, "New status update received!");
     if (payload.bytes[1] >= kPhraseCountV1 || payload.bytes[2] >= kPhraseCountV1) {
+        log_status_update_out_of_range(origin_device_id, payload.bytes[1], payload.bytes[2]);
         return;
     }
-    ESP_LOGI(TAG, "Message: %s, %s", kPhraseDictionaryV1[payload.bytes[1]], kPhraseDictionaryV1[payload.bytes[2]]);
+
+    log_status_update_received(origin_device_id, payload.bytes[1], payload.bytes[2]);
 }
 
 void Application::init_nvs() {
     esp_err_t status = nvs_flash_init();
     if (status == ESP_ERR_NVS_NO_FREE_PAGES || status == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_LOGW(TAG, "NVS unusable (%s), erasing - stored identity is lost", esp_err_to_name(status));
         ESP_ERROR_CHECK(nvs_flash_erase());
         status = nvs_flash_init();
     }

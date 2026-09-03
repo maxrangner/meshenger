@@ -9,6 +9,7 @@ namespace mesh {
 struct IncomingPacketResult{
     bool should_deliver = false;
     bool should_relay = false;
+    ScreenerClassification classification = ScreenerClassification::RejectedOwnPacket;
     protocol::Packet packet;
 };
 
