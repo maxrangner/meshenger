@@ -25,6 +25,7 @@ public:
     bool prepare_packet_for_relay(protocol::Packet& packet);
     IncomingPacketResult process_incoming_packet(const protocol::Packet incoming_packet);
 private:
+    bool packet_is_compatible(const protocol::Packet& packet);
     LocalNodeState node_state;
     PacketScreener screener;
 };

@@ -25,8 +25,8 @@ private:
     bool is_packet_fresh(const protocol::Packet& packet, uint8_t i) const;
     bool has_buffer_capacity();
 
-    uint64_t local_group_id;
-    uint64_t local_device_id;
+    uint64_t local_group_id = 0;
+    uint64_t local_device_id = 0;
     protocol::MessageId latest_message_ids[kMaxTrackedSources]{};
     uint8_t tracked_source_count = 0;
 };

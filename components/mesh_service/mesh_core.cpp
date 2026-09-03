@@ -19,8 +19,8 @@ LocalNodeState MeshCore::get_node_state() {
 OutgoingPacketResult MeshCore::create_outgoing_packet(const protocol::Payload& payload) {
     protocol::Packet packet{};
 
-    packet.header.protocol_version = node_state.protocol_version;
-    packet.header.phrase_dictionary_version = node_state.phrase_dictionary_version;
+    packet.header.protocol_version = protocol::kCurrentProtocolVersion;
+    packet.header.phrase_dictionary_version = protocol::kCurrentPhraseDictionaryVersion;
     packet.header.message_id.group_id = node_state.group_id;
     packet.header.message_id.origin_device_id = node_state.device_id;
     packet.header.message_id.sequence_num = node_state.next_sequence_num++;
@@ -53,7 +53,9 @@ IncomingPacketResult MeshCore::process_incoming_packet(const protocol::Packet in
     switch (result) {
         case ScreenerClassification::NewLocalGroupPacket:
             ESP_LOGI(TAG, "ScreenerClassification::NewLocalGroupPacket");
-            return_status.should_deliver = true; // put inside: if (packet_is_compatible) return Deliver else Error
+            if (packet_is_compatible(incoming_packet)) {
+                return_status.should_deliver = true;
+            }
             if (incoming_packet.header.hop_limit > 0) {
                 return_status.should_relay = true;
             }
@@ -76,6 +78,15 @@ IncomingPacketResult MeshCore::process_incoming_packet(const protocol::Packet in
     }
 
     return return_status;
+}
+
+bool MeshCore::packet_is_compatible(const protocol::Packet& packet) {
+    return (
+        packet.header.protocol_version >= 1 &&
+        packet.header.protocol_version <= protocol::kCurrentProtocolVersion && 
+        packet.header.phrase_dictionary_version >= 1 &&
+        packet.header.phrase_dictionary_version <= protocol::kCurrentPhraseDictionaryVersion
+    );
 }
 
 }

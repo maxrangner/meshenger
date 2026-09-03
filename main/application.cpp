@@ -100,6 +100,9 @@ void Application::send_status_update() {
 
 void Application::handle_received_status_update(const uint64_t origin_device_id, const protocol::Payload payload) {
     ESP_LOGI(TAG, "New status update received!");
+    if (payload.bytes[1] >= kPhraseCountV1 || payload.bytes[2] >= kPhraseCountV1) {
+        return;
+    }
     ESP_LOGI(TAG, "Message: %s, %s", kPhraseDictionaryV1[payload.bytes[1]], kPhraseDictionaryV1[payload.bytes[2]]);
 }
 

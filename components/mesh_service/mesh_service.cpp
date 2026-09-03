@@ -27,11 +27,12 @@ void MeshService::init(QueueHandle_t app_queue) {
     LocalNodeState node_state{};
     if (!load_node_state(&node_state)) {
         ESP_LOGI(TAG, "No stored settings loaded, using defaults");
-        node_state.protocol_version = 1;
-        node_state.phrase_dictionary_version = 1;
         node_state.device_id = get_mac_address();
         node_state.group_id = 0;
         node_state.next_sequence_num = 0;
+        if (!save_node_state(node_state)) {
+            ESP_LOGW(TAG, "Error setting local node settings to nvs.");
+        }
     }
     #ifdef CONFIG_MESHENGER_OVERRIDE_DEVICE_CONFIG
         node_state.group_id = static_cast<uint64_t>(CONFIG_MESHENGER_GROUP_ID);
@@ -61,7 +62,7 @@ void MeshService::mesh_service_task(void* pvParameters) {
 
     ESP_LOGI(TAG, "Running radio task on core %d", kTaskCore);
 
-    MeshEvent event;
+    MeshEvent event{};
     TickType_t relay_wait = portMAX_DELAY;
     self->radio.start_rx();
 
@@ -82,8 +83,7 @@ void MeshService::mesh_service_task(void* pvParameters) {
                 if (irq_result.type == radio::RadioResultType::FrameReceived) {
                     self->handle_received_frame(self->receive_buffer, irq_result.received_size);
                 } else if (irq_result.type == radio::RadioResultType::TransmissionComplete) {
-                    LocalNodeState local_state = self->core.get_node_state();
-                    save_node_state(local_state);
+                    // Empty for now
                 } else if (irq_result.type == radio::RadioResultType::Error) {
                     // Handle error
                 }
@@ -105,8 +105,8 @@ void MeshService::send_payload(const protocol::Payload& payload) {
 
 radio::RadioResultType MeshService::handle_send_request(const protocol::Payload& payload) {
     OutgoingPacketResult outgoing = core.create_outgoing_packet(payload);
-
-    if (!save_node_state(outgoing.updated_state)) {
+    
+    if (!save_sequence_num(outgoing.updated_state.next_sequence_num)) {
         return radio::RadioResultType::Error;
     }
     

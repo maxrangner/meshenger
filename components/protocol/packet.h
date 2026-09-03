@@ -5,6 +5,7 @@
 namespace protocol {
 
 constexpr uint8_t kCurrentProtocolVersion = 1;
+constexpr uint8_t kCurrentPhraseDictionaryVersion = 1;
 constexpr uint8_t kSerializedPacketSize = 27;
 constexpr uint8_t kPayloadSizeBytes = 4;
 constexpr uint8_t kHopLimitDefault = 3;
