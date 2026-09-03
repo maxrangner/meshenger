@@ -1,23 +1,63 @@
 menu "Meshenger configuration"
 
-    choice MESHENGER_DEVICE_ID
-        prompt "Device ID"
-        default MESHENGER_DEVICE_ID_A
+    config MESHENGER_OVERRIDE_DEVICE_CONFIG
+        bool "Override stored device configuration"
+        default n
+        help
+            Use build-time device configuration instead of the configuration
+            stored in NVS.
 
-        config MESHENGER_DEVICE_ID_A
-            bool "A"
-        config MESHENGER_DEVICE_ID_B
-            bool "B"
-        config MESHENGER_DEVICE_ID_C
-            bool "C"
-        config MESHENGER_DEVICE_ID_D
-            bool "D"
-    endchoice
+    config MESHENGER_GROUP_ID
+        int "Group ID"
+        depends on MESHENGER_OVERRIDE_DEVICE_CONFIG
+        range 0 3
+        default 0
 
-    # config MESHENGER_SEND_INTERVAL_MS
-    #     int "Send interval (milliseconds)"
-        # depends on MESHENGER_ROLE_SENDER
-        # range 100 3600000
-        # default 5000
+        help
+            Group ID used when device configuration override is enabled.
+
+    menuconfig MESHENGER_RELAY_CHAIN_TEST
+        bool "Enable forced four-device relay-chain test"
+        default n
+        help
+            Enable the test configuration that assigns the four fixed relay-chain
+            roles from their MAC-derived device IDs. This must remain disabled in
+            production builds. All four device IDs must be nonzero and unique.
+
+    config MESHENGER_RELAY_CHAIN_SOURCE_DEVICE_ID
+        hex "Device A ID (source)"
+        depends on MESHENGER_RELAY_CHAIN_TEST
+        range 0x000000000000 0xFFFFFFFFFFFF
+        default 0x000000000000
+        help
+            MAC-derived device ID for the source role, formatted as a 48-bit
+            hexadecimal value such as 0xAABBCCDDEEFF.
+
+    config MESHENGER_RELAY_CHAIN_HOP_3_DEVICE_ID
+        hex "Device B ID (accept hop 3)"
+        depends on MESHENGER_RELAY_CHAIN_TEST
+        range 0x000000000000 0xFFFFFFFFFFFF
+        default 0x000000000000
+        help
+            MAC-derived device ID for the first relay. This device accepts
+            packets whose incoming hop limit is 3.
+
+    config MESHENGER_RELAY_CHAIN_HOP_2_DEVICE_ID
+        hex "Device C ID (accept hop 2)"
+        depends on MESHENGER_RELAY_CHAIN_TEST
+        range 0x000000000000 0xFFFFFFFFFFFF
+        default 0x000000000000
+        help
+            MAC-derived device ID for the second relay. This device accepts
+            packets whose incoming hop limit is 2.
+
+    config MESHENGER_RELAY_CHAIN_HOP_1_DEVICE_ID
+        hex "Device D ID (accept hop 1)"
+        depends on MESHENGER_RELAY_CHAIN_TEST
+        range 0x000000000000 0xFFFFFFFFFFFF
+        default 0x000000000000
+        help
+            MAC-derived device ID for the destination. This device accepts
+            packets whose incoming hop limit is 1.
 
 endmenu
