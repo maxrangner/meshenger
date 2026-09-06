@@ -6,10 +6,10 @@ idf_component_register(
         radio_service
         protocol
         app_event
+        display
         esp-idf-button-driver
         nvs_flash
         esp_app_format
-        esp_driver_gpio
         esp_driver_i2c
-        esp_lcd
+
 )

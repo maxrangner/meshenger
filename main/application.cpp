@@ -3,11 +3,6 @@
 #include "nvs_flash.h"
 #include "esp_mac.h"
 #include "esp_log.h"
-#include "driver/gpio.h"
-
-#include "esp_lcd_panel_ops.h"
-#include "esp_lcd_panel_vendor.h"
-#include "driver/i2c_master.h"
 #include "packet_codec.h"
 #include "app_event.h"
 #include "packet_screener.h"
@@ -41,6 +36,10 @@ static void handle_button_callback(button_event_t event, gpio_num_t gpio_num, vo
 
 void Application::init() {
     init_nvs();
+    init_i2c();
+
+    oled_display.init_oled(i2c_bus_handle);
+    oled_display.display_test_pattern();
 
     app_queue_handle = xQueueCreate(10, sizeof(AppEvent));
     xTaskCreatePinnedToCore(
@@ -54,71 +53,9 @@ void Application::init() {
     );
 
     mesh.init(app_queue_handle);
-
-    btn_ctx.app_event_queue = app_queue_handle;
-    button_cfg_t btn_cfg = BUTTON_CFG_DEFAULT(button_pin, handle_button_callback);
-    btn_cfg.user_data = &btn_ctx;
-    btn_cfg.hasPullup = true;
-    ESP_ERROR_CHECK(button_service_init());
-    ESP_ERROR_CHECK(button_init(&btn_cfg, &main_btn));
-
-    esp_lcd_panel_handle_t int_panel_handle = init_int_lcd();
-    static uint8_t lcd_buffer[1024];
-    for (int i = 0; i < 1024; i++) {
-        lcd_buffer[i] = 0xFF;
-    }
-    ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(int_panel_handle, 0, 0, 128, 64, lcd_buffer));
-
+    init_btn();
+    
     ESP_LOGI(TAG, "ready · short press sends a status update");
-}
-
-esp_lcd_panel_handle_t Application::init_int_lcd() {
-    ESP_LOGI(TAG, "Enable LCD power");
-    ESP_ERROR_CHECK(gpio_set_direction(GPIO_NUM_36, GPIO_MODE_OUTPUT));
-    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_36, 0));
-
-    vTaskDelay(pdMS_TO_TICKS(30));
-
-    ESP_LOGI(TAG, "Initialize I2C bus");
-    i2c_master_bus_handle_t i2c_bus_handle = nullptr;
-    i2c_master_bus_config_t i2c_bus_cfg{};
-    i2c_bus_cfg.clk_source = I2C_CLK_SRC_DEFAULT;
-    i2c_bus_cfg.glitch_ignore_cnt = 7;
-    i2c_bus_cfg.i2c_port = I2C_NUM_0;
-    i2c_bus_cfg.sda_io_num = GPIO_NUM_17;
-    i2c_bus_cfg.scl_io_num = GPIO_NUM_18;
-    i2c_bus_cfg.flags.enable_internal_pullup = true;
-
-    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_cfg, &i2c_bus_handle));
-
-    ESP_LOGI(TAG, "Install panel IO");
-    esp_lcd_panel_io_handle_t io_handle = nullptr;
-    esp_lcd_panel_io_i2c_config_t io_config{};
-    io_config.dev_addr = 0x3C;
-    io_config.scl_speed_hz = (400 * 1000);
-    io_config.control_phase_bytes = 1;
-    io_config.lcd_cmd_bits = 8;
-    io_config.lcd_param_bits = 8;
-    io_config.dc_bit_offset = 6;
-
-    ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(i2c_bus_handle, &io_config, &io_handle));
-
-    ESP_LOGI(TAG, "Install SSD1306 panel driver");
-    esp_lcd_panel_handle_t panel_handle = NULL;
-    esp_lcd_panel_dev_config_t panel_config{};
-    panel_config.bits_per_pixel = 1;
-    panel_config.reset_gpio_num = GPIO_NUM_21;
-
-    esp_lcd_panel_ssd1306_config_t ssd1306_config{};
-    ssd1306_config.height = 64;
-
-    panel_config.vendor_config = &ssd1306_config;
-    ESP_ERROR_CHECK(esp_lcd_new_panel_ssd1306(io_handle, &panel_config, &panel_handle));
-    ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
-    ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
-    ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
-
-    return panel_handle;
 }
 
 void Application::app_task(void* pvParameters) {
@@ -176,6 +113,28 @@ void Application::init_nvs() {
         status = nvs_flash_init();
     }
     ESP_ERROR_CHECK(status);
+}
+
+void Application::init_i2c() {
+    ESP_LOGI(TAG, "Initialize I2C bus");
+    i2c_bus_cfg.clk_source = I2C_CLK_SRC_DEFAULT;
+    i2c_bus_cfg.glitch_ignore_cnt = 7;
+    i2c_bus_cfg.i2c_port = I2C_NUM_0;
+    i2c_bus_cfg.sda_io_num = GPIO_NUM_17;
+    i2c_bus_cfg.scl_io_num = GPIO_NUM_18;
+    i2c_bus_cfg.flags.enable_internal_pullup = true;
+
+    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_cfg, &i2c_bus_handle));
+}
+
+void Application::init_btn() {
+    ESP_LOGI(TAG, "Initialize button");
+    btn_ctx.app_event_queue = app_queue_handle;
+    button_cfg_t btn_cfg = BUTTON_CFG_DEFAULT(button_pin, handle_button_callback);
+    btn_cfg.user_data = &btn_ctx;
+    btn_cfg.hasPullup = true;
+    ESP_ERROR_CHECK(button_service_init());
+    ESP_ERROR_CHECK(button_init(&btn_cfg, &main_btn));
 }
 
 }
