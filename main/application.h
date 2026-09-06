@@ -1,6 +1,7 @@
 #pragma once
 
 #include "freertos/FreeRTOS.h"
+#include "esp_lcd_panel_io.h"
 #include "radio_service.h"
 #include "node_state.h"
 #include "packet.h"
@@ -20,6 +21,7 @@ public:
     void handle_received_status_update(const uint64_t origin_device_id, const protocol::Payload payload);
 private:
     void init_nvs();
+    esp_lcd_panel_handle_t init_int_lcd();
     static void app_task(void* pvParameters);
 
     TaskHandle_t app_task_handle = nullptr;
