@@ -39,7 +39,7 @@ void Application::init() {
     init_i2c();
 
     oled_display.init_oled(i2c_bus_handle);
-    oled_display.display_test_pattern();
+    oled_display.display_text(10, 10, "Hello world");
 
     app_queue_handle = xQueueCreate(10, sizeof(AppEvent));
     xTaskCreatePinnedToCore(

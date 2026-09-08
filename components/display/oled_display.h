@@ -13,6 +13,11 @@ public:
     void display_test_pattern();
     void display_text(uint8_t x, uint8_t y, const char* text);
 private:
+    void set_pixel(uint8_t* buffer, const uint8_t width, const uint8_t x, const uint8_t y, const bool on);
+
+    static constexpr uint8_t kOledWidth = 128;
+    static constexpr uint8_t kOledHeight = 64;
+
     static uint8_t oled_buffer[kOledBufferSize];
 
     i2c_master_bus_handle_t i2c_bus_handle = nullptr;
