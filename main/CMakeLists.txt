@@ -7,6 +7,7 @@ idf_component_register(
         protocol
         app_event
         display
+        ui
         esp-idf-button-driver
         nvs_flash
         esp_app_format

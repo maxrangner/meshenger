@@ -51,6 +51,14 @@ void OledDisplay::display_test_pattern() {
     ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, 128, 64, oled_buffer));
 }
 
+void OledDisplay::clear() {
+    for (int i = 0; i < kOledBufferSize; i++) {
+        oled_buffer[i] = 0;
+    }
+
+    ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, kOledWidth, kOledHeight, oled_buffer));
+}
+
 void OledDisplay::display_text(uint8_t x, uint8_t y, const char* text) {
     if (text == nullptr || x > kOledWidth - kCharacterWidth || y >= kOledHeight) {
         return;

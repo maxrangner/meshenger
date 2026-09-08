@@ -91,6 +91,7 @@ void Application::send_status_update() {
     payload.bytes[1] = message_part_0; // Phrase one
     payload.bytes[2] = message_part_1; // Phrase two
 
+    oled_ui.show_debug({display::DebugDirection::Sent}, 0, payload, kPhraseDictionaryV1[message_part_0], kPhraseDictionaryV1[message_part_1]);
     log_status_update_sending(message_part_0, message_part_1);
 
     mesh.send_payload(payload);
@@ -102,6 +103,7 @@ void Application::handle_received_status_update(const uint64_t origin_device_id,
         return;
     }
 
+    oled_ui.show_debug({display::DebugDirection::Received}, origin_device_id, payload, kPhraseDictionaryV1[payload.bytes[1]], kPhraseDictionaryV1[payload.bytes[2]]);
     log_status_update_received(origin_device_id, payload.bytes[1], payload.bytes[2]);
 }
 

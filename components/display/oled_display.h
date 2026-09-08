@@ -11,6 +11,7 @@ class OledDisplay {
 public:
     void init_oled(i2c_master_bus_handle_t i2c_bus);
     void display_test_pattern();
+    void clear();
     void display_text(uint8_t x, uint8_t y, const char* text);
 private:
     void set_pixel(uint8_t* buffer, const uint8_t width, const uint8_t x, const uint8_t y, const bool on);

@@ -8,6 +8,7 @@
 #include "mesh_service.h"
 #include "button_driver.h"
 #include "oled_display.h"
+#include "oled_ui.h"
 
 namespace app {
 
@@ -34,6 +35,7 @@ private:
     i2c_master_bus_config_t i2c_bus_cfg{};
 
     display::OledDisplay oled_display;
+    display::OledUi oled_ui{oled_display};
     
     mesh::MeshService mesh;
 
