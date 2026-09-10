@@ -45,6 +45,7 @@ private:
 
     uint8_t message_part_0 = 0;
     uint8_t message_part_1 = 1;
+    uint8_t message_part_2 = 2;
 };
 
 }

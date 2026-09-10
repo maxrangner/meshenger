@@ -39,7 +39,7 @@ void Application::init() {
     init_i2c();
 
     oled_display.init_oled(i2c_bus_handle);
-    oled_display.display_text(10, 10, "Hello world");
+    oled_ui.show_message("Booted. Waiting for transmission...");
 
     app_queue_handle = xQueueCreate(10, sizeof(AppEvent));
     xTaskCreatePinnedToCore(
@@ -90,8 +90,14 @@ void Application::send_status_update() {
     payload.bytes[0] = 2; // Message length
     payload.bytes[1] = message_part_0; // Phrase one
     payload.bytes[2] = message_part_1; // Phrase two
+    payload.bytes[3] = message_part_2; // Phrase three
 
-    oled_ui.show_debug({display::DebugDirection::Sent}, 0, payload, kPhraseDictionaryV1[message_part_0], kPhraseDictionaryV1[message_part_1]);
+    oled_ui.show_debug({display::DebugDirection::Sent},
+                        0,
+                        payload,
+                        kPhraseDictionaryV1[message_part_0],
+                        kPhraseDictionaryV1[message_part_1],
+                        kPhraseDictionaryV1[message_part_2]);
     log_status_update_sending(message_part_0, message_part_1);
 
     mesh.send_payload(payload);
@@ -103,7 +109,12 @@ void Application::handle_received_status_update(const uint64_t origin_device_id,
         return;
     }
 
-    oled_ui.show_debug({display::DebugDirection::Received}, origin_device_id, payload, kPhraseDictionaryV1[payload.bytes[1]], kPhraseDictionaryV1[payload.bytes[2]]);
+    oled_ui.show_debug({display::DebugDirection::Received},
+                        origin_device_id,
+                        payload,
+                        kPhraseDictionaryV1[message_part_0],
+                        kPhraseDictionaryV1[message_part_1],
+                        kPhraseDictionaryV1[message_part_2]);
     log_status_update_received(origin_device_id, payload.bytes[1], payload.bytes[2]);
 }
 
