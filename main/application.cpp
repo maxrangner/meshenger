@@ -36,10 +36,14 @@ static void handle_button_callback(button_event_t event, gpio_num_t gpio_num, vo
 
 void Application::init() {
     init_nvs();
+    init_vext();
     init_i2c();
+    init_spi();
 
     oled_display.init_oled(i2c_bus_handle);
     oled_ui.show_message("Booted. Waiting for transmission...");
+
+    epaper_display.init_epaper(epaper_spi_host, epaper_cfg);
 
     app_queue_handle = xQueueCreate(10, sizeof(AppEvent));
     xTaskCreatePinnedToCore(
@@ -128,6 +132,14 @@ void Application::init_nvs() {
     ESP_ERROR_CHECK(status);
 }
 
+void Application::init_vext() {
+    ESP_LOGI(TAG, "Enable Vext display rail");
+    ESP_ERROR_CHECK(gpio_set_direction(vext_pin, GPIO_MODE_OUTPUT));
+    ESP_ERROR_CHECK(gpio_set_level(vext_pin, 0));
+
+    vTaskDelay(pdMS_TO_TICKS(30));
+}
+
 void Application::init_i2c() {
     ESP_LOGI(TAG, "Initialize I2C bus");
     i2c_bus_cfg.clk_source = I2C_CLK_SRC_DEFAULT;
@@ -138,6 +150,18 @@ void Application::init_i2c() {
     i2c_bus_cfg.flags.enable_internal_pullup = true;
 
     ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_cfg, &i2c_bus_handle));
+}
+
+void Application::init_spi() {
+    ESP_LOGI(TAG, "Initialize SPI bus");
+    epaper_spi_bus_cfg.sclk_io_num = epaper_sclk_pin;
+    epaper_spi_bus_cfg.mosi_io_num = epaper_mosi_pin;
+    epaper_spi_bus_cfg.miso_io_num = GPIO_NUM_NC;
+    epaper_spi_bus_cfg.quadwp_io_num = GPIO_NUM_NC;
+    epaper_spi_bus_cfg.quadhd_io_num = GPIO_NUM_NC;
+    epaper_spi_bus_cfg.max_transfer_sz = display::kEpaperBufferSize;
+
+    ESP_ERROR_CHECK(spi_bus_initialize(epaper_spi_host, &epaper_spi_bus_cfg, SPI_DMA_CH_AUTO));
 }
 
 void Application::init_btn() {

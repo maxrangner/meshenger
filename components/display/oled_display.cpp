@@ -3,7 +3,7 @@
 #include "driver/gpio.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_log.h"
-#include "oled_font_5x7.h"
+#include "font_5x7.h"
 
 constexpr char TAG[] = "oled_display"; 
 
@@ -12,12 +12,6 @@ namespace display {
 uint8_t OledDisplay::oled_buffer[kOledBufferSize]{};
 
 void OledDisplay::init_oled(i2c_master_bus_handle_t i2c_bus) {
-    ESP_LOGI(TAG, "Enable LCD power");
-    ESP_ERROR_CHECK(gpio_set_direction(GPIO_NUM_36, GPIO_MODE_OUTPUT));
-    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_36, 0));
-
-    vTaskDelay(pdMS_TO_TICKS(30));
-
     ESP_LOGI(TAG, "Install panel IO");
     io_config.dev_addr = 0x3C;
     io_config.scl_speed_hz = (400 * 1000);
