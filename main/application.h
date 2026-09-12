@@ -1,11 +1,14 @@
 #pragma once
 
 #include "freertos/FreeRTOS.h"
-#include "radio_service.h"
+#include "driver/i2c_master.h"
 #include "node_state.h"
+#include "radio_service.h"
 #include "packet.h"
 #include "mesh_service.h"
 #include "button_driver.h"
+#include "oled_display.h"
+#include "oled_ui.h"
 
 namespace app {
 
@@ -20,11 +23,19 @@ public:
     void handle_received_status_update(const uint64_t origin_device_id, const protocol::Payload payload);
 private:
     void init_nvs();
+    void init_i2c();
+    void init_btn();
     static void app_task(void* pvParameters);
 
     TaskHandle_t app_task_handle = nullptr;
     QueueHandle_t app_queue_handle = nullptr;
     static constexpr BaseType_t kTaskCore = 0;
+
+    i2c_master_bus_handle_t i2c_bus_handle = nullptr;
+    i2c_master_bus_config_t i2c_bus_cfg{};
+
+    display::OledDisplay oled_display;
+    display::OledUi oled_ui{oled_display};
     
     mesh::MeshService mesh;
 
@@ -34,6 +45,7 @@ private:
 
     uint8_t message_part_0 = 0;
     uint8_t message_part_1 = 1;
+    uint8_t message_part_2 = 2;
 };
 
 }

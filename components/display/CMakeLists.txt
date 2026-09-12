@@ -1,9 +1,8 @@
 idf_component_register(
-    SRCS "radio_service.cpp"
+    SRCS "oled_display.cpp"
     INCLUDE_DIRS "."
     REQUIRES
-        RadioLib
         esp_driver_gpio
-        protocol
-        app_event
+        esp_driver_i2c
+        esp_lcd
 )
