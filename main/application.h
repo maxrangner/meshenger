@@ -44,9 +44,7 @@ private:
     button_t main_btn;
     ButtonContext btn_ctx;
 
-    uint8_t message_part_0 = 0;
-    uint8_t message_part_1 = 5;
-    uint8_t message_part_2 = 8;
+    uint8_t current_selected_mgs = 0;
 };
 
 }

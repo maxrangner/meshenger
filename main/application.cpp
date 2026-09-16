@@ -13,6 +13,14 @@ constexpr char TAG[] = "app";
 
 namespace app {
 
+namespace {
+uint8_t preset_demo_messages[3][3] = {
+    {0, 5, 8},
+    {1, 7, 8},
+    {1, 4, 9}
+};
+}
+
 static void handle_button_callback(button_event_t event, gpio_num_t gpio_num, void *user_data) {
     auto* context = static_cast<ButtonContext*>(user_data);
 
@@ -87,51 +95,49 @@ void Application::send_status_update() {
     // TODO: Construct status update through UI
 
     protocol::Payload payload{};
-    payload.bytes[0] = 2; // Message length
-    payload.bytes[1] = message_part_0; // Phrase one
-    payload.bytes[2] = message_part_1; // Phrase two
-    payload.bytes[3] = message_part_2; // Phrase three
+    payload.bytes[0] = 3; // Message length
+    payload.bytes[1] = preset_demo_messages[current_selected_mgs][0]; // Phrase one
+    payload.bytes[2] = preset_demo_messages[current_selected_mgs][1]; // Phrase two
+    payload.bytes[3] = preset_demo_messages[current_selected_mgs][2]; // Phrase three
 
     oled_ui.show_debug({display::DebugDirection::Sent},
                         0,
                         payload,
-                        kPhraseDictionaryV1[message_part_0],
-                        kPhraseDictionaryV1[message_part_1],
-                        kPhraseDictionaryV1[message_part_2]);
-    log_status_update_sending(message_part_0, message_part_1);
+                        kPhraseDictionaryV1[payload.bytes[1]],
+                        kPhraseDictionaryV1[payload.bytes[2]],
+                        kPhraseDictionaryV1[payload.bytes[3]]);
+    log_status_update_sending(preset_demo_messages[current_selected_mgs][0],
+                              preset_demo_messages[current_selected_mgs][1],
+                              preset_demo_messages[current_selected_mgs][2]);
 
     mesh.send_payload(payload);
 }
 
 void Application::handle_received_status_update(const uint64_t origin_device_id, const protocol::Payload payload) {
-    if (payload.bytes[1] >= kPhraseCountV1 || payload.bytes[2] >= kPhraseCountV1) {
-        log_status_update_out_of_range(origin_device_id, payload.bytes[1], payload.bytes[2]);
+    if (payload.bytes[1] >= kPhraseCountV1 ||
+        payload.bytes[2] >= kPhraseCountV1 ||
+        payload.bytes[3] >= kPhraseCountV1) {
+        log_status_update_out_of_range(origin_device_id,
+                                       payload.bytes[1],
+                                       payload.bytes[2],
+                                       payload.bytes[3]);
         return;
     }
 
     oled_ui.show_debug({display::DebugDirection::Received},
                         origin_device_id,
                         payload,
-                        kPhraseDictionaryV1[message_part_0],
-                        kPhraseDictionaryV1[message_part_1],
-                        kPhraseDictionaryV1[message_part_2]);
-    log_status_update_received(origin_device_id, payload.bytes[1], payload.bytes[2]);
+                        kPhraseDictionaryV1[payload.bytes[1]],
+                        kPhraseDictionaryV1[payload.bytes[2]],
+                        kPhraseDictionaryV1[payload.bytes[3]]);
+    log_status_update_received(origin_device_id,
+                               payload.bytes[1],
+                               payload.bytes[2],
+                               payload.bytes[3]);
 }
 
 void Application::change_message() {
-    if (message_part_0 == 0) {
-        message_part_0 = 1;
-        message_part_1 = 7;
-        message_part_2 = 8;
-    } else if (message_part_0 == 1) {
-        message_part_0 = 1;
-        message_part_0 = 4;
-        message_part_0 = 9;
-    } else {
-        message_part_0 = 0;
-        message_part_1 = 5;
-        message_part_2 = 8;
-    }
+    current_selected_mgs = (current_selected_mgs + 1) % 3;
 }
 
 void Application::init_nvs() {

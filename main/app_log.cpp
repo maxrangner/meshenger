@@ -48,28 +48,33 @@ void log_boot_banner() {
              static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_DEFAULT) / 1024));
 }
 
-void log_status_update_sending(const uint8_t first_phrase, const uint8_t second_phrase) {
-    ESP_LOGI(TAG, "sending status update: \"%s %s\"",
+void log_status_update_sending(const uint8_t first_phrase, const uint8_t second_phrase, const uint8_t third_phrase) {
+    ESP_LOGI(TAG, "sending status update: \"%s %s %s\"",
              kPhraseDictionaryV1[first_phrase],
-             kPhraseDictionaryV1[second_phrase]);
+             kPhraseDictionaryV1[second_phrase],
+             kPhraseDictionaryV1[third_phrase]);
 }
 
 void log_status_update_received(const uint64_t origin_device_id,
                                 const uint8_t first_phrase,
-                                const uint8_t second_phrase) {
-    ESP_LOGI(TAG, "status update from %s: \"%s %s\"",
+                                const uint8_t second_phrase,
+                                const uint8_t third_phrase) {
+    ESP_LOGI(TAG, "status update from %s: \"%s %s %s\"",
              protocol::format::device_id(origin_device_id).chars,
              kPhraseDictionaryV1[first_phrase],
-             kPhraseDictionaryV1[second_phrase]);
+             kPhraseDictionaryV1[second_phrase],
+             kPhraseDictionaryV1[third_phrase]);
 }
 
 void log_status_update_out_of_range(const uint64_t origin_device_id,
                                     const uint8_t first_phrase,
-                                    const uint8_t second_phrase) {
-    ESP_LOGW(TAG, "status update from %s discarded: phrase id %u/%u outside dictionary v%u (%u phrases)",
+                                    const uint8_t second_phrase,
+                                    const uint8_t third_phrase) {
+    ESP_LOGW(TAG, "status update from %s discarded: phrase id %u/%u/%u outside dictionary v%u (%u phrases)",
              protocol::format::device_id(origin_device_id).chars,
              static_cast<unsigned>(first_phrase),
              static_cast<unsigned>(second_phrase),
+             static_cast<unsigned>(third_phrase),
              static_cast<unsigned>(kPhraseDictionaryVersion),
              static_cast<unsigned>(kPhraseCountV1));
 }
