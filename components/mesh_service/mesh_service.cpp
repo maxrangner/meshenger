@@ -136,6 +136,9 @@ void MeshService::handle_received_frame(uint8_t* serialized_packet, const radio:
     }
 
     IncomingPacketResult incoming = core.process_incoming_packet(packet);
+    #if CONFIG_MESHENGER_RELAY_CHAIN_TEST
+    hop_test_screener(incoming);
+    #endif
     log_received_packet(incoming, frame);
 
     if (incoming.should_deliver) {
@@ -196,6 +199,42 @@ uint32_t MeshService::random_blocking_delay() {
     vTaskDelay(pdMS_TO_TICKS(relay_delay_ms));
 
     return relay_delay_ms;
+}
+
+void MeshService::hop_test_screener(IncomingPacketResult& incoming) {
+    LocalNodeState node_state{};
+    node_state = core.get_node_state();
+
+    if (!hop_test_is_valid(node_state)) {
+        return;
+    }
+    
+    if (node_state.device_id == static_cast<uint64_t>(CONFIG_MESHENGER_RELAY_CHAIN_HOP_3_DEVICE_ID)) {
+        incoming.should_deliver = false;
+        incoming.should_relay &= (incoming.packet.header.hop_limit == 3);
+    } else if (node_state.device_id == static_cast<uint64_t>(CONFIG_MESHENGER_RELAY_CHAIN_HOP_2_DEVICE_ID)) {
+        incoming.should_deliver = false;
+        incoming.should_relay &= (incoming.packet.header.hop_limit == 2);
+    } else if (node_state.device_id == static_cast<uint64_t>(CONFIG_MESHENGER_RELAY_CHAIN_HOP_1_DEVICE_ID)) {
+        incoming.should_deliver &= (incoming.packet.header.hop_limit == 1);
+        incoming.should_relay = false;
+    }
+}
+
+bool MeshService::hop_test_is_valid(const LocalNodeState node_state) {
+    if (static_cast<uint64_t>(CONFIG_MESHENGER_RELAY_CHAIN_SOURCE_DEVICE_ID) == 0 ||
+        static_cast<uint64_t>(CONFIG_MESHENGER_RELAY_CHAIN_HOP_1_DEVICE_ID) == 0 ||
+        static_cast<uint64_t>(CONFIG_MESHENGER_RELAY_CHAIN_HOP_2_DEVICE_ID) == 0 ||
+        static_cast<uint64_t>(CONFIG_MESHENGER_RELAY_CHAIN_HOP_3_DEVICE_ID) == 0) {
+            return false;
+        }
+    if (static_cast<uint64_t>(CONFIG_MESHENGER_RELAY_CHAIN_SOURCE_DEVICE_ID) == node_state.device_id ||
+        static_cast<uint64_t>(CONFIG_MESHENGER_RELAY_CHAIN_HOP_1_DEVICE_ID) == node_state.device_id ||
+        static_cast<uint64_t>(CONFIG_MESHENGER_RELAY_CHAIN_HOP_2_DEVICE_ID) == node_state.device_id ||
+        static_cast<uint64_t>(CONFIG_MESHENGER_RELAY_CHAIN_HOP_3_DEVICE_ID) == node_state.device_id) {
+            return true;
+        }
+    return false;
 }
 
 }

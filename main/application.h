@@ -26,6 +26,7 @@ private:
     void init_i2c();
     void init_btn();
     static void app_task(void* pvParameters);
+    void change_message();
 
     TaskHandle_t app_task_handle = nullptr;
     QueueHandle_t app_queue_handle = nullptr;
@@ -44,8 +45,8 @@ private:
     ButtonContext btn_ctx;
 
     uint8_t message_part_0 = 0;
-    uint8_t message_part_1 = 1;
-    uint8_t message_part_2 = 2;
+    uint8_t message_part_1 = 5;
+    uint8_t message_part_2 = 8;
 };
 
 }

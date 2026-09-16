@@ -72,7 +72,7 @@ void Application::app_task(void* pvParameters) {
                 self->send_status_update();
                 break;
             case AppEventType::LongButtonPress:
-                ESP_LOGD(TAG, "long press has no action yet");
+                self->change_message();
                 break;
             case AppEventType::StatusUpdateReceived:
                 self->handle_received_status_update(event.origin_device_id, event.payload);
@@ -116,6 +116,22 @@ void Application::handle_received_status_update(const uint64_t origin_device_id,
                         kPhraseDictionaryV1[message_part_1],
                         kPhraseDictionaryV1[message_part_2]);
     log_status_update_received(origin_device_id, payload.bytes[1], payload.bytes[2]);
+}
+
+void Application::change_message() {
+    if (message_part_0 == 0) {
+        message_part_0 = 1;
+        message_part_1 = 7;
+        message_part_2 = 8;
+    } else if (message_part_0 == 1) {
+        message_part_0 = 1;
+        message_part_0 = 4;
+        message_part_0 = 9;
+    } else {
+        message_part_0 = 0;
+        message_part_1 = 5;
+        message_part_2 = 8;
+    }
 }
 
 void Application::init_nvs() {

@@ -32,6 +32,8 @@ private:
     void deliver_packet_to_app(const protocol::Packet& packet);
     uint64_t get_mac_address();
     uint32_t random_blocking_delay();
+    void hop_test_screener(IncomingPacketResult& incoming);
+    bool hop_test_is_valid(const LocalNodeState node_state);
 
     TaskHandle_t mesh_task_handle = nullptr;
     inline static QueueHandle_t mesh_queue_handle = nullptr;
